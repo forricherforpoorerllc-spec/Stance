@@ -71,25 +71,46 @@ export default function TMobileFiberPartnersPage() {
         dangerouslySetInnerHTML={{
           __html: JSON.stringify({
             "@context": "https://schema.org",
-            "@type": "Organization",
-            name: "Stance",
+            "@type": "Service",
+            "@id": "https://stance-marketing.com/tmobile-fiber-partners#service",
+            name: "T-Mobile Fiber D2D Partnership Program",
+            serviceType: "Telecom Sales Partnership",
             description:
-              "Partnered with the only Master Agent for T-Mobile Fiber D2D campaigns. Join us for dealer, contractor, and sales agent opportunities.",
+              "Exclusive partnership opportunities through the only Master Agent for T-Mobile Fiber door-to-door sales campaigns. Dealer, contractor, and sales agent programs available with competitive contracts.",
             url: "https://stance-marketing.com/tmobile-fiber-partners",
-            logo: "https://stance-marketing.com/images/stance-logo.png",
-            contactPoint: {
-              "@type": "ContactPoint",
-              contactType: "Partnership Inquiries",
-              areaServed: "US",
-              availableLanguage: "English",
+            provider: {
+              "@id": "https://stance-marketing.com/#organization",
+            },
+            areaServed: {
+              "@type": "Country",
+              name: "United States",
+            },
+            audience: {
+              "@type": "Audience",
+              audienceType: "Telecom Sales Dealers, Independent Contractors, Sales Agents",
             },
             offers: {
               "@type": "Offer",
-              name: "T-Mobile Fiber D2D Partnership Program",
+              name: "T-Mobile Fiber Dealer & Agent Partnership",
               description:
-                "Exclusive partnership opportunities for dealers, contractors, and sales agents in T-Mobile Fiber door-to-door sales campaigns.",
+                "Exclusive dealer, contractor, and sales agent positions for T-Mobile Fiber door-to-door sales.",
               category: "Business Partnership",
             },
+          }),
+        }}
+      />
+      <Script
+        id="breadcrumb-schema"
+        type="application/ld+json"
+        strategy="beforeInteractive"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            itemListElement: [
+              { "@type": "ListItem", position: 1, name: "Home", item: "https://stance-marketing.com" },
+              { "@type": "ListItem", position: 2, name: "T-Mobile Fiber Partners", item: "https://stance-marketing.com/tmobile-fiber-partners" },
+            ],
           }),
         }}
       />

@@ -14,6 +14,7 @@ export function BusinessPartnershipsHero() {
           src="/images/business-partnership-hero-bg.jpg"
           alt=""
           fill
+          sizes="100vw"
           className="object-cover opacity-20"
           priority
           aria-hidden="true"

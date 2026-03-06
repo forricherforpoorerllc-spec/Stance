@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import Script from "next/script"
 import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
 import { PartnersHub } from "@/components/partners-hub"
@@ -47,8 +48,23 @@ export const metadata: Metadata = {
 }
 
 export default function PartnersPage() {
+  const breadcrumbSchema = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: "https://stance-marketing.com" },
+      { "@type": "ListItem", position: 2, name: "Partner Programs", item: "https://stance-marketing.com/partners" },
+    ],
+  }
+
   return (
     <main className="min-h-screen bg-[#0a0e13] text-white">
+      <Script
+        id="breadcrumb-schema"
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+        strategy="beforeInteractive"
+      />
       <Navbar />
       <PartnersHub />
       <Footer />

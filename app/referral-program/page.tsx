@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import Script from "next/script"
 import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
 import { ReferralProgramContent } from "@/components/referral-program-content"
@@ -46,8 +47,68 @@ export const metadata: Metadata = {
 }
 
 export default function ReferralProgramPage() {
+  const breadcrumbSchema = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: "https://stance-marketing.com" },
+      { "@type": "ListItem", position: 2, name: "Referral Program", item: "https://stance-marketing.com/referral-program" },
+    ],
+  }
+
+  const serviceSchema = {
+    "@context": "https://schema.org",
+    "@type": "Service",
+    "@id": "https://stance-marketing.com/referral-program#service",
+    name: "Internet Referral Partner Program",
+    serviceType: "Referral Affiliate Program",
+    description:
+      "Earn commissions for every verified internet installation by referring customers to leading providers including AT&T, Spectrum, Frontier, T-Mobile, Brightspeed, Kinetic, Optimum, Earthlink, and Altafiber. No selling required — just connect customers.",
+    url: "https://stance-marketing.com/referral-program",
+    provider: {
+      "@id": "https://stance-marketing.com/#organization",
+    },
+    areaServed: {
+      "@type": "Country",
+      name: "United States",
+    },
+    audience: {
+      "@type": "Audience",
+      audienceType: "Realtors, Property Managers, Insurance Agents, Mortgage Brokers, and anyone with a relevant network",
+    },
+    offers: {
+      "@type": "Offer",
+      name: "Referral Commission",
+      description: "Earn commissions per verified customer installation. No sales experience required.",
+      priceCurrency: "USD",
+      eligibleCustomerType: "Individual",
+    },
+    hasOfferCatalog: {
+      "@type": "OfferCatalog",
+      name: "Referral Partner Benefits",
+      itemListElement: [
+        { "@type": "Offer", itemOffered: { "@type": "Service", name: "Commission per verified installation" } },
+        { "@type": "Offer", itemOffered: { "@type": "Service", name: "No selling experience required" } },
+        { "@type": "Offer", itemOffered: { "@type": "Service", name: "Custom referral links and tracking" } },
+        { "@type": "Offer", itemOffered: { "@type": "Service", name: "Access to 9 major internet providers" } },
+      ],
+    },
+  }
+
   return (
     <main className="min-h-screen bg-[#0a0e13] text-white">
+      <Script
+        id="breadcrumb-schema"
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+        strategy="beforeInteractive"
+      />
+      <Script
+        id="service-schema"
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(serviceSchema) }}
+        strategy="beforeInteractive"
+      />
       <Navbar />
       <ReferralProgramContent />
       <Footer />

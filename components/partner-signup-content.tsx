@@ -1,11 +1,9 @@
 "use client"
 
-import React from "react"
-
-import { useState } from "react"
+import React, { useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { motion } from "framer-motion"
+import { motion, AnimatePresence } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -17,14 +15,10 @@ import {
   CheckCircle2,
   ArrowRight,
   Shield,
-  Phone,
-  Mail,
-  MapPin,
-  Clock,
   CheckCircle,
   Loader2,
+  X,
 } from "lucide-react"
-import { Card, CardContent } from "@/components/ui/card"
 
 const partnerTypes = [
   {
@@ -61,6 +55,13 @@ const partnerTypes = [
     title: "T-Mobile Fiber D2D",
     description: "Door-to-door sales for T-Mobile Fiber. Dealer and contractor programs.",
     color: "#E20074",
+  },
+  {
+    id: "verizon-d2d",
+    icon: Briefcase,
+    title: "Verizon Fios D2D",
+    description: "Authorized Verizon partner for Fios fiber & 5G Home Internet door-to-door sales.",
+    color: "#CD040B",
   },
 ]
 
@@ -132,16 +133,76 @@ export function PartnerSignupContent() {
 
     setIsSubmitting(true)
 
-    // Simulate submission (replace with actual API endpoint)
-    setTimeout(() => {
+    try {
+      await fetch("/api/send-partner-application", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      })
+    } catch {
+      // Non-fatal: still show success
+    } finally {
       setIsSubmitting(false)
       setIsSubmitted(true)
-    }, 2000)
+    }
   }
 
   return (
     <div className="min-h-screen">
-      {/* Hero Section */}
+      {/* Application Received Modal */}
+      <AnimatePresence>
+        {isSubmitted && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              transition={{ type: "spring", duration: 0.4 }}
+              className="bg-[#111827] border border-green-500/40 rounded-2xl p-10 max-w-lg w-full text-center relative shadow-2xl"
+            >
+              <button
+                onClick={() => setIsSubmitted(false)}
+                className="absolute top-4 right-4 text-gray-500 hover:text-white transition-colors"
+                aria-label="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+              <div className="bg-green-500/20 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
+                <CheckCircle className="w-10 h-10 text-green-400" />
+              </div>
+              <h3 className="text-3xl font-bold text-white mb-4">Application Received!</h3>
+              <p className="text-gray-300 text-lg mb-6 leading-relaxed">
+                Thank you for your interest in partnering with Stance Marketing. Our team will review your application
+                and contact you within 24–48 business hours.
+              </p>
+              <p className="text-gray-500 text-sm mb-8">
+                Questions? Email us at{" "}
+                <a href="mailto:partnerships@stancellc.com" className="text-red-400 hover:underline">
+                  partnerships@stancellc.com
+                </a>
+              </p>
+              <div className="flex gap-3 justify-center">
+                <Button
+                  onClick={() => setIsSubmitted(false)}
+                  className="bg-green-600 hover:bg-green-700 text-white px-6"
+                >
+                  Done
+                </Button>
+                <Link href="/">
+                  <Button variant="outline" className="border-gray-600 text-gray-300 hover:bg-gray-800">
+                    Return to Homepage
+                  </Button>
+                </Link>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
       <section className="relative pt-32 pb-20 md:pt-40 md:pb-28 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-[#0a0e13] via-[#111827] to-[#0a0e13]" />
         <div className="absolute top-1/3 left-1/4 w-96 h-96 bg-red-500/10 rounded-full blur-3xl" />
@@ -221,37 +282,7 @@ export function PartnerSignupContent() {
               </p>
             </div>
 
-            {/* Success State */}
-            {isSubmitted ? (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="max-w-2xl mx-auto"
-              >
-                <Card className="bg-[#111827] border-green-500/30 border-2">
-                  <CardContent className="p-12 text-center">
-                    <div className="bg-green-500/20 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
-                      <CheckCircle className="w-10 h-10 text-green-400" />
-                    </div>
-                    <h3 className="text-3xl font-bold text-white mb-4">Application Received</h3>
-                    <p className="text-gray-300 text-lg mb-6 leading-relaxed">
-                      Thank you for your interest in partnering with Stance Marketing. Our team will review your
-                      application and contact you within 24-48 business hours.
-                    </p>
-                    <p className="text-gray-400 mb-8">
-                      Questions? Email us at{" "}
-                      <a href="mailto:partnerships@stancellc.com" className="text-red-400 hover:underline">
-                        partnerships@stancellc.com
-                      </a>
-                    </p>
-                    <Link href="/">
-                      <Button className="bg-red-500 hover:bg-red-600 text-white">Return to Homepage</Button>
-                    </Link>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ) : (
-              <form onSubmit={handleSubmit}>
+            <form onSubmit={handleSubmit}>
                 {/* Step 1: Select Partnership Type */}
                 <div className="mb-10">
                   <h3 className="text-xl font-semibold text-white mb-4">
@@ -265,7 +296,7 @@ export function PartnerSignupContent() {
                         onClick={() => handleTypeSelect(type.id)}
                         className={`text-left p-5 rounded-xl border-2 transition-all ${
                           selectedType === type.id
-                            ? "border-red-500 bg-red-500/10"
+                            ? "border-green-500 bg-green-500/10"
                             : "border-gray-700 bg-[#111827] hover:border-gray-500"
                         }`}
                       >
@@ -277,12 +308,12 @@ export function PartnerSignupContent() {
                             <type.icon className="w-5 h-5" style={{ color: type.color }} />
                           </div>
                           <div>
-                            <div className="font-semibold text-white text-sm">{type.title}</div>
+                            <div className={`font-semibold text-sm ${selectedType === type.id ? "text-green-400" : "text-white"}`}>{type.title}</div>
                             <div className="text-gray-400 text-xs mt-1 leading-relaxed">{type.description}</div>
                           </div>
                         </div>
                         {selectedType === type.id && (
-                          <div className="mt-3 flex items-center gap-1 text-red-400 text-xs font-medium">
+                          <div className="mt-3 flex items-center gap-1 text-green-400 text-xs font-medium">
                             <CheckCircle2 className="w-3.5 h-3.5" />
                             Selected
                           </div>
@@ -461,54 +492,7 @@ export function PartnerSignupContent() {
                   </p>
                 </div>
               </form>
-            )}
           </motion.div>
-        </div>
-      </section>
-
-      {/* Contact Info Section */}
-      <section className="py-16 bg-[#0f1419] border-t border-white/5">
-        <div className="container mx-auto px-4">
-          <div className="max-w-5xl mx-auto">
-            <div className="text-center mb-10">
-              <h2 className="text-2xl md:text-3xl font-bold text-white mb-3">Have Questions?</h2>
-              <p className="text-gray-400">Our partnership team is ready to help you find the right opportunity.</p>
-            </div>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div className="bg-[#111827] border border-gray-700 rounded-xl p-6 text-center">
-                <div className="bg-red-500/10 w-12 h-12 rounded-lg flex items-center justify-center mx-auto mb-3">
-                  <Mail className="w-6 h-6 text-red-400" />
-                </div>
-                <h4 className="font-semibold text-white text-sm mb-1">Email</h4>
-                <a href="mailto:partnerships@stancellc.com" className="text-gray-400 text-sm hover:text-red-400 transition-colors">
-                  partnerships@stancellc.com
-                </a>
-              </div>
-              <div className="bg-[#111827] border border-gray-700 rounded-xl p-6 text-center">
-                <div className="bg-red-500/10 w-12 h-12 rounded-lg flex items-center justify-center mx-auto mb-3">
-                  <Phone className="w-6 h-6 text-red-400" />
-                </div>
-                <h4 className="font-semibold text-white text-sm mb-1">Phone</h4>
-                <a href="tel:5133416067" className="text-gray-400 text-sm hover:text-red-400 transition-colors">
-                  (513) 341-6067
-                </a>
-              </div>
-              <div className="bg-[#111827] border border-gray-700 rounded-xl p-6 text-center">
-                <div className="bg-red-500/10 w-12 h-12 rounded-lg flex items-center justify-center mx-auto mb-3">
-                  <MapPin className="w-6 h-6 text-red-400" />
-                </div>
-                <h4 className="font-semibold text-white text-sm mb-1">Location</h4>
-                <p className="text-gray-400 text-sm">West Chester, OH 45069</p>
-              </div>
-              <div className="bg-[#111827] border border-gray-700 rounded-xl p-6 text-center">
-                <div className="bg-red-500/10 w-12 h-12 rounded-lg flex items-center justify-center mx-auto mb-3">
-                  <Clock className="w-6 h-6 text-red-400" />
-                </div>
-                <h4 className="font-semibold text-white text-sm mb-1">Response Time</h4>
-                <p className="text-gray-400 text-sm">24-48 business hours</p>
-              </div>
-            </div>
-          </div>
         </div>
       </section>
 

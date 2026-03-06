@@ -16,28 +16,61 @@ import { CtaSection } from "@/components/cta-section"
 export default function Home() {
   const organizationSchema = {
     "@context": "https://schema.org",
-    "@type": "Organization",
+    "@type": ["Organization", "ProfessionalService"],
+    "@id": "https://stance-marketing.com/#organization",
     name: "Stance",
     alternateName: "Stance Marketing",
     url: "https://stance-marketing.com",
-    logo: "https://stance-marketing.com/images/stance-logo-white.png",
+    logo: {
+      "@type": "ImageObject",
+      url: "https://stance-marketing.com/images/stance-logo-white.png",
+      width: 512,
+      height: 512,
+    },
+    image: "https://stance-marketing.com/images/partnership-hero.png",
     description:
       "Leading internet provider partnership programs connecting sales agents, businesses, and referral partners with top telecom brands including AT&T, Spectrum, Frontier, T-Mobile, Brightspeed, Kinetic, Optimum, Earthlink, and Altafiber.",
     foundingDate: "2020",
+    numberOfEmployees: {
+      "@type": "QuantitativeValue",
+      minValue: 10,
+      maxValue: 50,
+    },
     areaServed: {
       "@type": "Country",
       name: "United States",
     },
-    contactPoint: {
-      "@type": "ContactPoint",
-      contactType: "Partnership Inquiries",
-      areaServed: "US",
-      availableLanguage: ["English"],
-    },
+    knowsAbout: [
+      "Internet Service Provider Partnerships",
+      "Telecom Sales Channel Management",
+      "Fiber Internet Sales",
+      "Door-to-Door Sales Training",
+      "Referral Marketing Programs",
+      "Commission-Based Sales Programs",
+      "AT&T Authorized Dealer Program",
+      "Spectrum Authorized Retailer",
+      "T-Mobile Fiber D2D",
+      "Verizon Fios Partner Program",
+    ],
+    contactPoint: [
+      {
+        "@type": "ContactPoint",
+        email: "partnerships@stancellc.com",
+        contactType: "Partnership Inquiries",
+        areaServed: "US",
+        availableLanguage: ["English"],
+      },
+      {
+        "@type": "ContactPoint",
+        contactType: "Customer Service",
+        areaServed: "US",
+        availableLanguage: ["English"],
+      },
+    ],
     sameAs: [
-      "https://stance-marketing.com",
-      "https://stance-marketing.com/partners",
-      "https://stance-marketing.com/become-a-partner",
+      "https://www.linkedin.com/company/stance-marketing",
+      "https://www.facebook.com/stancemarketingco",
+      "https://www.instagram.com/stancemarketingco",
     ],
     hasOfferCatalog: {
       "@type": "OfferCatalog",
@@ -91,6 +124,15 @@ export default function Home() {
             url: "https://stance-marketing.com/tmobile-fiber-partners",
           },
         },
+        {
+          "@type": "Offer",
+          itemOffered: {
+            "@type": "Service",
+            name: "Verizon Fios D2D Partnership",
+            description: "Authorized Verizon partner for Fios fiber and 5G Home Internet door-to-door sales.",
+            url: "https://stance-marketing.com/verizon-d2d-partners",
+          },
+        },
       ],
     },
   }
@@ -98,26 +140,69 @@ export default function Home() {
   const websiteSchema = {
     "@context": "https://schema.org",
     "@type": "WebSite",
+    "@id": "https://stance-marketing.com/#website",
     name: "Stance",
     url: "https://stance-marketing.com",
     description:
       "Internet provider partnership programs connecting sales professionals with leading telecom brands nationwide.",
     publisher: {
-      "@type": "Organization",
-      name: "Stance",
-      logo: {
-        "@type": "ImageObject",
-        url: "https://stance-marketing.com/images/stance-logo-white.png",
-      },
+      "@id": "https://stance-marketing.com/#organization",
     },
-    potentialAction: {
-      "@type": "SearchAction",
-      target: {
-        "@type": "EntryPoint",
-        urlTemplate: "https://stance-marketing.com/?s={search_term_string}",
+  }
+
+  const faqSchema = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: [
+      {
+        "@type": "Question",
+        name: "What industries does Stance Marketing specialize in?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "Stance Marketing specializes in providing marketing solutions for Cable, Internet, Lifeline, and Energy sectors. Our expertise in these industries allows us to create targeted strategies that deliver exceptional results for our clients.",
+        },
       },
-      "query-input": "required name=search_term_string",
-    },
+      {
+        "@type": "Question",
+        name: "How does Stance Marketing approach new client partnerships?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "We begin with a comprehensive consultation to understand your business goals, target audience, and current marketing challenges. From there, we develop a customized strategy tailored to your specific needs, with clear metrics for success and regular reporting on progress.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "What marketing services does Stance offer?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "Stance offers a full range of marketing services including digital marketing, brand development, content creation, social media management, SEO optimization, PPC campaigns, email marketing, and traditional marketing strategies tailored to your industry needs.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "How does Stance measure marketing success?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "We establish clear KPIs at the beginning of each campaign based on your business objectives. Our data-driven approach includes regular reporting on metrics such as conversion rates, customer acquisition costs, ROI, engagement metrics, and other relevant performance indicators.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "What makes Stance different from other marketing agencies?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "Stance combines deep industry expertise in specific sectors with innovative marketing approaches. Our dedicated team provides personalized service, transparent communication, and measurable results. We focus on building long-term partnerships rather than just completing transactions.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "How quickly can I expect to see results from working with Stance?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "While some tactical initiatives may show immediate results, strategic marketing typically requires time to build momentum. Most clients begin seeing measurable improvements within 3-6 months, with significant results becoming apparent after 6-12 months of consistent implementation.",
+        },
+      },
+    ],
   }
 
   return (
@@ -132,6 +217,12 @@ export default function Home() {
         id="website-schema"
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }}
+        strategy="beforeInteractive"
+      />
+      <Script
+        id="faq-schema"
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
         strategy="beforeInteractive"
       />
       <Navbar />

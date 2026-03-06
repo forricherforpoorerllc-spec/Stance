@@ -95,6 +95,21 @@ export default function SalesAgentProgramPage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
         strategy="beforeInteractive"
       />
+      <Script
+        id="breadcrumb-schema"
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            itemListElement: [
+              { "@type": "ListItem", position: 1, name: "Home", item: "https://stance-marketing.com" },
+              { "@type": "ListItem", position: 2, name: "Sales Agent Program", item: "https://stance-marketing.com/sales-agent-program" },
+            ],
+          }),
+        }}
+        strategy="beforeInteractive"
+      />
       <Navbar />
       <SalesAgentProgramContent />
       <Footer />

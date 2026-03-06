@@ -59,6 +59,7 @@ export function ReferralProgramContent() {
             src="/referral-partner-handshake.jpg"
             alt=""
             fill
+            sizes="100vw"
             className="object-cover"
             priority
             aria-hidden="true"

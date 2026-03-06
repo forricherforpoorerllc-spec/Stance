@@ -109,6 +109,7 @@ export function BusinessPartnershipsContent() {
             src="/business-partnership-meeting.jpg"
             alt="Business Partnerships"
             fill
+            sizes="100vw"
             className="object-cover"
             priority
           />

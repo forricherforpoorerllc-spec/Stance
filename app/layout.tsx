@@ -78,7 +78,6 @@ export const metadata: Metadata = {
     apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
     other: [{ url: "/android-chrome-512x512.png", sizes: "512x512", type: "image/png" }],
   },
-    generator: 'v0.app'
 }
 
 export default function RootLayout({
@@ -95,10 +94,13 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />
         <link rel="icon" href="/android-chrome-512x512.png" sizes="512x512" type="image/png" />
 
-        {/* Preload critical assets */}
-        <link rel="preload" href="/images/hero-background.png" as="image" />
+        {/* Preload critical LCP image */}
+        <link rel="preload" href="/images/hero-background.png" as="image" fetchPriority="high" />
 
-        {/* Add browser hints */}
+        {/* DNS prefetch for any external services */}
+        <link rel="dns-prefetch" href="//api.resend.com" />
+
+        {/* PWA theme color */}
         <meta name="theme-color" content="#000000" />
       </head>
       <body className={`${inter.className} antialiased`}>

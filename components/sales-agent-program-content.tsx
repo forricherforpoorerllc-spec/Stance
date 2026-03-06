@@ -109,6 +109,7 @@ export function SalesAgentProgramContent() {
             src="/images/sales-agent-hero-bg.jpg"
             alt=""
             fill
+            sizes="100vw"
             className="object-cover opacity-20"
             priority
             aria-hidden="true"
@@ -201,6 +202,7 @@ export function SalesAgentProgramContent() {
                         src={channel.image || "/placeholder.svg"}
                         alt={channel.title}
                         fill
+                        sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
                         className="object-cover group-hover:scale-105 transition-transform duration-500"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-[#111827] via-[#111827]/50 to-transparent" />

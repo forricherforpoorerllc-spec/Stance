@@ -56,6 +56,7 @@ export function SpectrumEventGallery() {
                   src={image.src || "/placeholder.svg"}
                   alt={image.alt}
                   fill
+                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                   className="object-cover group-hover:scale-110 transition-transform duration-500"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#003057]/80 via-[#003057]/20 to-transparent opacity-60 group-hover:opacity-80 transition-opacity" />

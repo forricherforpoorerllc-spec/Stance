@@ -71,25 +71,46 @@ export default function VerizonD2DPartnersPage() {
         dangerouslySetInnerHTML={{
           __html: JSON.stringify({
             "@context": "https://schema.org",
-            "@type": "Organization",
-            name: "Stance",
+            "@type": "Service",
+            "@id": "https://stance-marketing.com/verizon-d2d-partners#service",
+            name: "Verizon Fios D2D Partnership Program",
+            serviceType: "Telecom Sales Partnership",
             description:
-              "Authorized Verizon partner for Fios fiber and 5G Home Internet D2D sales campaigns. Dealer, contractor, and sales agent programs available.",
+              "Authorized Verizon partner program for Fios fiber and 5G Home Internet door-to-door sales campaigns. Dealer, contractor, and sales agent opportunities with competitive commissions.",
             url: "https://stance-marketing.com/verizon-d2d-partners",
-            logo: "https://stance-marketing.com/images/stance-logo.png",
-            contactPoint: {
-              "@type": "ContactPoint",
-              contactType: "Partnership Inquiries",
-              areaServed: "US",
-              availableLanguage: "English",
+            provider: {
+              "@id": "https://stance-marketing.com/#organization",
+            },
+            areaServed: {
+              "@type": "Country",
+              name: "United States",
+            },
+            audience: {
+              "@type": "Audience",
+              audienceType: "Telecom Sales Dealers, Independent Contractors, Sales Agents",
             },
             offers: {
               "@type": "Offer",
-              name: "Verizon Fios D2D Partnership Program",
+              name: "Verizon Fios Dealer & Agent Partnership",
               description:
-                "Authorized partnership opportunities for dealers, contractors, and sales agents in Verizon Fios fiber and 5G Home Internet door-to-door sales campaigns.",
+                "Authorized dealer, contractor, and sales agent positions for Verizon Fios fiber and 5G Home Internet D2D sales.",
               category: "Business Partnership",
             },
+          }),
+        }}
+      />
+      <Script
+        id="breadcrumb-schema"
+        type="application/ld+json"
+        strategy="beforeInteractive"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            itemListElement: [
+              { "@type": "ListItem", position: 1, name: "Home", item: "https://stance-marketing.com" },
+              { "@type": "ListItem", position: 2, name: "Verizon D2D Partners", item: "https://stance-marketing.com/verizon-d2d-partners" },
+            ],
           }),
         }}
       />

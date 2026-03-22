@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server"
 
-const RESEND_API_KEY = "re_5vA96r6J_qvEw21PH1tv4MzVG3S7F4f2o"
-const GOOGLE_SCRIPT_URL =
-  "https://script.google.com/macros/s/AKfycbyAQixXLZ1oULckrXdD7l27uyDBwCA2X-BzqX9Ude3bzWLgjmTCUii3gLkoq7aYeUwvwA/exec"
-const TO_EMAIL = "gamblerspassion@gmail.com"
+const RESEND_API_KEY = process.env.RESEND_API_KEY || ""
+const GOOGLE_SCRIPT_URL = process.env.GOOGLE_SCRIPT_URL || ""
+const TO_EMAIL = process.env.ADMIN_EMAIL || "gamblerspassion@gmail.com"
 
 export async function POST(req: Request) {
   try {

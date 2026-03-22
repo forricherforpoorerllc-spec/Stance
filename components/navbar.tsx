@@ -108,10 +108,10 @@ export function Navbar() {
                   ))}
                   <div className="border-t border-gray-800 mt-2 pt-2">
                     <Link
-                      href="/become-a-partner"
+                      href="/apply"
                       className="block px-4 py-2 text-red-400 hover:text-red-300 hover:bg-gray-900/50 transition-colors text-sm font-semibold"
                     >
-                      Become a Partner
+                      Apply Now
                     </Link>
                   </div>
                 </div>
@@ -126,12 +126,12 @@ export function Navbar() {
             Contact
           </button>
 
-          <Link href="/become-a-partner">
+          <Link href="/apply">
             <Button
               variant="outline"
               className="border-red-500 text-white hover:bg-red-500 hover:text-white transition-all duration-300 bg-transparent"
             >
-              Become a Partner
+              Apply Now
             </Button>
           </Link>
         </nav>
@@ -195,7 +195,7 @@ export function Navbar() {
             </button>
 
             <Link
-              href="/become-a-partner"
+              href="/apply"
               onClick={() => setMobileMenuOpen(false)}
               className="w-full max-w-xs"
             >
@@ -203,7 +203,7 @@ export function Navbar() {
                 variant="outline"
                 className="border-red-500 text-white hover:bg-red-500 hover:text-white transition-all duration-300 w-full bg-transparent"
               >
-                Become a Partner
+                Apply Now
               </Button>
             </Link>
           </div>

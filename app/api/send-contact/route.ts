@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 
-const RESEND_API_KEY = "re_5vA96r6J_qvEw21PH1tv4MzVG3S7F4f2o"
-const TO_EMAIL = "gamblerspassion@gmail.com"
+const RESEND_API_KEY = process.env.RESEND_API_KEY || ""
+const TO_EMAIL = process.env.ADMIN_EMAIL || "gamblerspassion@gmail.com"
 
 export async function POST(req: Request) {
   try {

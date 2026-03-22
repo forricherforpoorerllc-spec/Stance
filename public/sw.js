@@ -9,6 +9,7 @@ const urlsToCache = [
   "/apple-touch-icon.png",
   "/android-chrome-512x512.png",
   "/images/hero-background.png",
+  "/images/stance-logo.png",
   "/images/stance-logo-new.png",
   "/images/stance-a-logo-new.png",
 ]

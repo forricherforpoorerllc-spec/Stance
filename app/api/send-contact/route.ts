@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY || ""
+const GOOGLE_SCRIPT_URL = process.env.GOOGLE_SCRIPT_URL || ""
 const TO_EMAIL = process.env.ADMIN_EMAIL || "gamblerspassion@gmail.com"
 
 export async function POST(req: Request) {
@@ -9,6 +10,24 @@ export async function POST(req: Request) {
 
     if (!name || !email || !message) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
+    }
+
+    // Submit to Google Sheet
+    try {
+      await fetch(GOOGLE_SCRIPT_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          formType: "contact",
+          name,
+          email,
+          phone: phone || "",
+          subject: subject || "",
+          message,
+        }),
+      })
+    } catch {
+      // Non-fatal
     }
 
     const res = await fetch("https://api.resend.com/emails", {

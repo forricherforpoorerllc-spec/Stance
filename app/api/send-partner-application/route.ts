@@ -17,19 +17,15 @@ export async function POST(req: Request) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          formType: "partnerApplication",
           name,
           email,
-          company: company || "",
           phone: phone || "",
-          website: "",
-          message: [
-            `Partnership Type: ${partnerType}`,
-            state ? `State: ${state}` : "",
-            experience ? `Experience: ${experience}` : "",
-            message ? `Notes: ${message}` : "",
-          ]
-            .filter(Boolean)
-            .join(" | "),
+          company: company || "",
+          partnerType: partnerType || "",
+          state: state || "",
+          experience: experience || "",
+          notes: message || "",
         }),
       })
     } catch (sheetErr) {

@@ -57,18 +57,14 @@ export async function POST(req: Request) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          formType: "application",
           name,
           email,
-          company: company || "",
           phone: phone || "",
-          website: "",
-          message: [
-            `Program: ${programLabel}`,
-            state ? `State: ${state}` : "",
-            programFieldSummary,
-          ]
-            .filter(Boolean)
-            .join(" | "),
+          state: state || "",
+          company: company || "",
+          program: programLabel,
+          details: programFieldSummary,
         }),
       })
     } catch (sheetErr) {

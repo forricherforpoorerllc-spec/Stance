@@ -248,6 +248,13 @@ export function OnboardingContent({ token, prefill, exhibits }: OnboardingConten
 
     setIsSubmitting(true)
     try {
+      let onboardingPdfUrl = ""
+      try {
+        onboardingPdfUrl = await uploadOnboardingPDF(data, programLabel, contractorName, effectiveDate)
+      } catch {
+        // Non-fatal — continue without PDF URL
+      }
+
       const res = await fetch("/api/onboard", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -257,6 +264,7 @@ export function OnboardingContent({ token, prefill, exhibits }: OnboardingConten
           effectiveDate,
           programLabel,
           contractorName,
+          onboardingPdfUrl,
         }),
       })
       if (!res.ok) throw new Error("Submission failed")
@@ -1205,12 +1213,12 @@ function StepW9({
 
 // ── Download helpers ──
 
-async function downloadOnboardingPDF(
+async function buildOnboardingPDF(
   data: OnboardingData,
   programLabel: string,
   contractorName: string,
   effectiveDate: string,
-): Promise<void> {
+) {
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "letter" })
   const pageW = doc.internal.pageSize.getWidth()
   const pageH = doc.internal.pageSize.getHeight()
@@ -1369,5 +1377,37 @@ async function downloadOnboardingPDF(
     })
   }
 
+  return doc
+}
+
+async function downloadOnboardingPDF(
+  data: OnboardingData,
+  programLabel: string,
+  contractorName: string,
+  effectiveDate: string,
+): Promise<void> {
+  const doc = await buildOnboardingPDF(data, programLabel, contractorName, effectiveDate)
   doc.save(`Stance-Onboarding-${contractorName.replace(/\s+/g, "-")}.pdf`)
+}
+
+async function uploadOnboardingPDF(
+  data: OnboardingData,
+  programLabel: string,
+  contractorName: string,
+  effectiveDate: string,
+): Promise<string> {
+  const doc = await buildOnboardingPDF(data, programLabel, contractorName, effectiveDate)
+  const pdfBlob = doc.output("blob")
+  const file = new File(
+    [pdfBlob],
+    `Stance-Onboarding-${contractorName.replace(/\s+/g, "-")}.pdf`,
+    { type: "application/pdf" },
+  )
+  const formData = new FormData()
+  formData.append("file", file)
+  formData.append("category", "contracts")
+  const res = await fetch("/api/upload", { method: "POST", body: formData })
+  if (!res.ok) throw new Error("PDF upload failed")
+  const json = await res.json() as { url: string }
+  return json.url
 }

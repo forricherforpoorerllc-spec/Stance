@@ -1,5 +1,5 @@
 import type React from "react"
-import type { Metadata } from "next"
+import type { Metadata, Viewport } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
@@ -15,13 +15,13 @@ const inter = Inter({
 export const metadata: Metadata = {
   metadataBase: new URL("https://stance-marketing.com"),
   title: {
-    default: "Stance | Internet Provider Partnership Programs & Sales Opportunities",
+    default: "Stance | Managed Sales Organization for Internet Service Providers",
     template: "%s | Stance",
   },
   description:
-    "Join Stance's partner network and represent leading internet providers including AT&T, Spectrum, Frontier, T-Mobile, Brightspeed, Kinetic, Optimum, Earthlink, and Altafiber. Multiple partnership opportunities: referral programs, sales agent positions, business partnerships, and event team roles. Competitive commissions and nationwide coverage.",
+    "Stance is a managed sales organization that deploys field teams, event campaigns, referral networks, and channel programs to drive subscriber growth for internet service providers. We also offer structured sales and referral programs for independent professionals and businesses.",
   keywords:
-    "internet provider partnership, telecom sales jobs, ISP channel partner, fiber internet sales, sales agent jobs, referral program, business partnership, authorized dealer, internet sales opportunities, commission based sales, online sales jobs, field sales agent, door to door sales, independent contractor, remote sales jobs, multi-carrier sales, broadband reseller, AT&T partner, Spectrum dealer, Frontier partner, T-Mobile partner, Brightspeed partner, Kinetic partner, Optimum dealer, Earthlink affiliate, Altafiber partner, telecommunications sales, internet referral partner, property manager referral, realtor referral program, insurance agent referral, event sales team, retail sales jobs, network marketing, partnership program, sales representative jobs, telecom partnership program",
+    "managed sales organization, ISP channel development, internet provider sales partner, field marketing organization, telecom sales organization, ISP subscriber acquisition, door-to-door ISP sales, fiber internet field sales, event sales team, referral network telecom, ISP channel partner, broadband sales channel, internet sales organization, telecom D2D sales, ISP marketing partner, cable internet sales team, fiber sales agent, internet sales representative, carrier channel partner, telecom field sales, ISP partner program, internet provider partnership, authorized dealer program, referral partner program, sales agent jobs telecom, commission based sales, independent contractor telecom, internet referral program, property manager referral, realtor referral program, D2D broadband sales, retail internet sales, AT&T sales partner, Spectrum sales channel, Frontier sales partner, T-Mobile internet sales, authorized ISP dealer, broadband subscriber growth, residential internet sales, business internet sales",
   authors: [{ name: "Stance" }],
   creator: "Stance",
   publisher: "Stance",
@@ -35,9 +35,9 @@ export const metadata: Metadata = {
     locale: "en_US",
     url: "https://stance-marketing.com",
     siteName: "Stance",
-    title: "Stance | Internet Provider Partnership Programs & Sales Opportunities",
+    title: "Stance | Managed Sales Organization for Internet Service Providers",
     description:
-      "Join Stance's partner network. Represent AT&T, Spectrum, Frontier, T-Mobile, Brightspeed, Kinetic, Optimum, Earthlink, and Altafiber. Multiple partnership opportunities with competitive commissions.",
+      "Stance deploys field sales teams, event campaigns, referral networks, and channel programs to grow subscriber volume for internet service providers. Structured programs also available for sales professionals and businesses.",
     images: [
       {
         url: "/images/partnership-hero.png",
@@ -49,9 +49,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Stance | Internet Provider Partnership Programs & Sales Opportunities",
+    title: "Stance | Managed Sales Organization for Internet Service Providers",
     description:
-      "Join Stance's partner network. Represent leading internet providers. Multiple partnership opportunities with competitive commissions.",
+      "Stance deploys field sales teams, event campaigns, referral networks, and channel programs to drive subscriber growth for internet service providers nationwide.",
     images: ["/images/partnership-hero.png"],
   },
   robots: {
@@ -68,7 +68,6 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "/",
   },
-  viewport: "width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover",
   icons: {
     icon: [
       { url: "/favicon.ico", sizes: "any" },
@@ -78,6 +77,13 @@ export const metadata: Metadata = {
     apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
     other: [{ url: "/android-chrome-512x512.png", sizes: "512x512", type: "image/png" }],
   },
+}
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  viewportFit: "cover",
 }
 
 export default function RootLayout({

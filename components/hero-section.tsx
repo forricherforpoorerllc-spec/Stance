@@ -40,7 +40,7 @@ export function HeroSection() {
             className="will-change-transform"
           >
             <h1 className="text-4xl md:text-5xl lg:text-7xl font-bold mb-4 text-white leading-tight">
-              Redefining <span className="text-red-500">Digital</span> Marketing
+              We Run the Sales. <span className="text-red-500">You Run the Network.</span>
             </h1>
           </motion.div>
 
@@ -51,8 +51,8 @@ export function HeroSection() {
             className="will-change-transform"
           >
             <p className="text-lg md:text-xl text-gray-300 mb-6 md:mb-8 max-w-2xl">
-              We partner with major brands to deliver cutting-edge solutions in Cable, Internet, Lifeline, and Energy
-              sectors.
+              We deploy field sales teams, event campaigns, referral networks, and channel programs that drive verified
+              subscriber activations for internet service providers across the United States.
             </p>
           </motion.div>
 
@@ -66,14 +66,14 @@ export function HeroSection() {
               className="bg-red-500 hover:bg-red-600 text-white px-6 py-5 sm:px-8 sm:py-6 rounded-none w-full sm:w-auto"
               onClick={() => document.getElementById("services")?.scrollIntoView({ behavior: "smooth" })}
             >
-              Our Services
+              Our Channels
             </Button>
             <Button
               variant="outline"
               className="border-gray-500 text-white hover:bg-gray-800 px-6 py-5 sm:px-8 sm:py-6 rounded-none w-full sm:w-auto"
               onClick={() => document.getElementById("contact")?.scrollIntoView({ behavior: "smooth" })}
             >
-              Contact Us
+              Work With Us
             </Button>
           </motion.div>
         </div>

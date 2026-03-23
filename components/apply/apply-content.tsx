@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useCallback } from "react"
+import React, { useState, useCallback, useEffect, useMemo } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
@@ -107,22 +107,23 @@ const PROGRAMS: ProgramOption[] = [
   },
   {
     id: "business",
-    title: "Business",
-    description: "Integrate internet into your business",
+    title: "Business (IBO)",
+    description: "Established business with active sales agents",
     icon: Building2,
     fields: [
       {
         name: "businessType",
         label: "Type of business",
         type: "select",
-        options: ["Property management", "Real estate", "Retail / storefront", "IT services / MSP", "Moving company", "Call center", "Insurance", "Other"],
+        options: ["Solar", "Alarm / Security", "Call Center", "D2D / Field Sales", "Retail / Events", "Insurance", "Real Estate", "IT / Technology", "Moving Company", "Other"],
         required: true,
       },
       {
         name: "customerBase",
-        label: "Customer base size",
+        label: "Forecasted Monthly Sales",
         type: "select",
-        options: ["Under 100", "100-500", "500-2,000", "2,000-10,000", "10,000+"],
+        options: ["Under 10 sales/mo", "10–25 sales/mo", "25–50 sales/mo", "50–100 sales/mo", "100+ sales/mo"],
+        required: true,
       },
     ],
   },
@@ -281,6 +282,31 @@ export function ApplyContent() {
     setStep((s) => Math.max(s - 1, 1))
   }, [])
 
+  // Scroll to top of page on every step change
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" })
+  }, [step])
+
+  // Step completion detection for green button
+  const isStepReady = useMemo(() => {
+    if (step === 1) {
+      return !!(
+        formData.partnerType &&
+        formData.firstName.trim() &&
+        formData.lastName.trim() &&
+        /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email) &&
+        formData.phone.trim() &&
+        formData.state
+      )
+    }
+    if (step === 2 && selectedProgram) {
+      return selectedProgram.fields
+        .filter((f) => f.required)
+        .every((f) => !!formData[f.name]?.trim())
+    }
+    return true
+  }, [step, formData, selectedProgram])
+
   const handleSubmit = useCallback(async () => {
     if (!validateStep()) return
 
@@ -291,10 +317,20 @@ export function ApplyContent() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
       })
-      if (!res.ok) throw new Error("Submission failed")
+      if (!res.ok) {
+        let message = "Something went wrong. Please try again."
+        try {
+          const parsed = await res.json() as { error?: string }
+          if (parsed?.error) message = parsed.error
+        } catch {
+          // Keep default fallback message.
+        }
+        throw new Error(message)
+      }
       setIsComplete(true)
-    } catch {
-      setErrors({ submit: "Something went wrong. Please try again." })
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Something went wrong. Please try again."
+      setErrors({ submit: message })
     } finally {
       setIsSubmitting(false)
     }
@@ -348,7 +384,6 @@ export function ApplyContent() {
 
         {/* ── LEFT: Brand Panel (desktop only) ── */}
         <div className="relative hidden lg:flex lg:w-[420px] xl:w-[480px] flex-shrink-0 bg-[#0d0406] flex-col overflow-hidden">
-          {/* Subtle grid texture */}
           <div
             aria-hidden
             className="absolute inset-0 opacity-[0.04]"
@@ -358,7 +393,6 @@ export function ApplyContent() {
               backgroundSize: "40px 40px",
             }}
           />
-          {/* Red glow */}
           <div
             aria-hidden
             className="absolute -bottom-32 -left-32 w-96 h-96 rounded-full opacity-20"
@@ -366,7 +400,6 @@ export function ApplyContent() {
           />
 
           <div className="relative z-10 flex flex-col h-full p-8 lg:p-12 xl:p-14">
-            {/* Logo */}
             <div className="mb-auto pb-8 lg:pb-0">
               <Image
                 src="/images/stance-logo-white.png"
@@ -377,7 +410,6 @@ export function ApplyContent() {
               />
             </div>
 
-            {/* Main copy — hidden on mobile, visible lg+ */}
             <div className="hidden lg:flex flex-col flex-1 justify-center py-10">
               <span className="text-xs font-bold tracking-[0.22em] text-red-400 uppercase mb-4">
                 Partner Program
@@ -390,7 +422,6 @@ export function ApplyContent() {
               </p>
             </div>
 
-            {/* Stats grid — hidden on mobile */}
             <div className="hidden lg:grid grid-cols-2 gap-3 mt-auto">
               {[
                 { value: "6", label: "Programs" },
@@ -422,10 +453,9 @@ export function ApplyContent() {
                 Apply to join<br className="hidden sm:block" /> Stance
               </h1>
               <p className="text-slate-600 text-lg leading-relaxed mb-10">
-                Choose a partnership program, fill out a short form, and our team will review your application within 24–48 hours.
+                Choose a partnership program, fill out a short form, and our team will review your application within 24-48 hours.
               </p>
 
-              {/* Steps */}
               <div className="mb-10 space-y-0">
                 {[
                   { icon: ClipboardList, label: "Choose your program & enter your info", sub: "Step 1" },
@@ -433,7 +463,6 @@ export function ApplyContent() {
                   { icon: Clock, label: "Review & submit — we'll be in touch shortly", sub: "Step 3" },
                 ].map((item, i) => (
                   <div key={i} className="flex gap-4">
-                    {/* Line + dot connector */}
                     <div className="flex flex-col items-center">
                       <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl ${i === 0 ? "bg-red-500 text-white" : "bg-slate-200 border border-slate-300 text-slate-600"}`}>
                         <item.icon className="h-4 w-4" />
@@ -467,9 +496,27 @@ export function ApplyContent() {
   // ── Completion ──
   if (isComplete) {
     return (
-      <div className="min-h-screen bg-[#edf1f7] flex flex-col">
-        <div className="border-b border-slate-800/30 bg-slate-900/95 shadow-lg shadow-slate-900/20">
-          <div className="mx-auto max-w-3xl px-4 py-4">
+      <div className="min-h-screen bg-[#090d14] relative overflow-hidden flex flex-col">
+        <div
+          aria-hidden
+          className="absolute inset-0 opacity-30"
+          style={{
+            background:
+              "radial-gradient(circle at 10% 15%, rgba(225,29,72,0.30), transparent 35%), radial-gradient(circle at 85% 85%, rgba(249,115,22,0.20), transparent 32%), linear-gradient(180deg, #0b111d 0%, #090d14 100%)",
+          }}
+        />
+        <div
+          aria-hidden
+          className="absolute inset-0 opacity-[0.07]"
+          style={{
+            backgroundImage:
+              "linear-gradient(rgba(255,255,255,0.7) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.7) 1px, transparent 1px)",
+            backgroundSize: "36px 36px",
+          }}
+        />
+
+        <div className="relative z-10 border-b border-white/10 bg-slate-950/60 backdrop-blur-xl">
+          <div className="mx-auto max-w-5xl px-5 py-4 flex items-center justify-between">
             <Image
               src="/images/stance-logo-white.png"
               alt="Stance Marketing"
@@ -477,28 +524,80 @@ export function ApplyContent() {
               height={32}
               className="h-7 w-auto"
             />
+            <span className="text-[10px] sm:text-xs uppercase tracking-[0.24em] text-white/65 font-semibold">
+              Partner Application
+            </span>
           </div>
         </div>
-        <div className="flex-1 flex items-center justify-center px-4 py-12">
+
+        <div className="relative z-10 flex-1 px-5 py-10 sm:py-14 flex items-center justify-center">
           <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.4 }}
-            className="w-full max-w-md text-center"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.45, ease: "easeOut" }}
+            className="w-full max-w-4xl"
           >
-            <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-green-50 border border-green-200">
-              <Check className="h-7 w-7 text-green-600" />
+            <div className="rounded-3xl border border-white/15 bg-white/[0.06] backdrop-blur-md shadow-[0_30px_90px_rgba(0,0,0,0.45)] overflow-hidden">
+              <div className="grid lg:grid-cols-[1.2fr_0.8fr]">
+                <div className="p-7 sm:p-10 border-b lg:border-b-0 lg:border-r border-white/10">
+                  <div className="inline-flex items-center gap-2 rounded-full bg-emerald-500/15 border border-emerald-300/25 px-3 py-1.5 mb-5">
+                    <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500 text-white">
+                      <Check className="h-3.5 w-3.5" />
+                    </span>
+                    <span className="text-xs uppercase tracking-[0.22em] text-emerald-100 font-bold">Successfully Submitted</span>
+                  </div>
+
+                  <h1 className="text-3xl sm:text-5xl font-bold text-white leading-[1.05] mb-4">
+                    Application<br />Received
+                  </h1>
+                  <p className="text-white/75 text-base sm:text-lg leading-relaxed max-w-xl mb-6">
+                    Thanks {formData.firstName}. Your {selectedProgram?.title || "partner"} application is in our queue. We&apos;ll review your submission and contact you with onboarding steps.
+                  </p>
+
+                  <div className="grid sm:grid-cols-3 gap-3">
+                    {[
+                      { label: "Status", value: "In Review" },
+                      { label: "Response Window", value: "24-48 Hours" },
+                      { label: "Program", value: selectedProgram?.title || "Selected" },
+                    ].map((item) => (
+                      <div key={item.label} className="rounded-xl border border-white/15 bg-black/25 px-4 py-3">
+                        <p className="text-[11px] uppercase tracking-[0.2em] text-white/45 mb-1">{item.label}</p>
+                        <p className="text-sm sm:text-base font-semibold text-white">{item.value}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="p-7 sm:p-9 bg-slate-950/35">
+                  <p className="text-xs uppercase tracking-[0.2em] text-red-200/80 font-bold mb-4">What Happens Next</p>
+                  <div className="space-y-4 mb-7">
+                    {[
+                      "You already received a confirmation email.",
+                      "Our recruiting team validates your fit for the selected channel.",
+                      "Qualified applicants receive onboarding access and next-step instructions.",
+                    ].map((line, idx) => (
+                      <div key={line} className="flex gap-3 items-start">
+                        <span className="mt-0.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-red-500/20 border border-red-300/30 text-red-100 text-xs font-bold">
+                          {idx + 1}
+                        </span>
+                        <p className="text-sm text-white/80 leading-relaxed">{line}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="rounded-xl border border-white/15 bg-white/[0.04] p-4 mb-5">
+                    <p className="text-xs text-white/60 mb-1">Need help now?</p>
+                    <p className="text-sm text-white font-semibold">info@stance-marketing.com</p>
+                  </div>
+
+                  <Link href="/" className="block">
+                    <Button className="w-full h-11 rounded-xl bg-red-500 hover:bg-red-400 text-white font-semibold shadow-lg shadow-red-500/25">
+                      Return Home
+                    </Button>
+                  </Link>
+                </div>
+              </div>
             </div>
-            <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-3">Application Received</h1>
-            <p className="text-slate-600 text-base mb-3 leading-relaxed">
-              Thanks, {formData.firstName}. We&apos;ll review your {selectedProgram?.title} application and reach out within 24-48 hours.
-            </p>
-            <p className="text-slate-500 text-sm mb-8">Check your email for confirmation.</p>
-            <Link href="/">
-              <Button variant="outline" className="border-slate-300 text-slate-800 hover:bg-slate-100 rounded-xl text-base px-6 h-11">
-                Return Home
-              </Button>
-            </Link>
           </motion.div>
         </div>
       </div>
@@ -584,7 +683,11 @@ export function ApplyContent() {
           <Button
             onClick={step < TOTAL_STEPS ? goNext : handleSubmit}
             disabled={step === TOTAL_STEPS && isSubmitting}
-            className="flex-1 sm:flex-none bg-red-500 hover:bg-red-400 text-white font-semibold rounded-xl px-8 h-11 shadow-lg shadow-red-500/40 transition-all disabled:opacity-50"
+            className={`flex-1 sm:flex-none font-semibold rounded-xl px-8 h-11 shadow-lg transition-all disabled:opacity-50 text-white ${
+              isStepReady
+                ? "bg-emerald-500 hover:bg-emerald-400 shadow-emerald-500/40"
+                : "bg-red-500 hover:bg-red-400 shadow-red-500/40"
+            }`}
           >
             {step < TOTAL_STEPS ? (
               <>Continue<ArrowRight className="ml-2 h-4 w-4" /></>

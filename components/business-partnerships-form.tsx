@@ -84,10 +84,10 @@ export function BusinessPartnershipsForm() {
             <p className="text-red-200 mb-10">
               Questions? Email us at{" "}
               <a
-                href="mailto:partnerships@stancellc.com"
+                href="mailto:info@stance-marketing.com"
                 className="text-white underline font-semibold hover:text-red-100"
               >
-                partnerships@stancellc.com
+                info@stance-marketing.com
               </a>
             </p>
             <Link href="/become-a-partner">

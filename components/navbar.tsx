@@ -84,7 +84,7 @@ export function Navbar() {
             onMouseLeave={() => setPartnersDropdownOpen(false)}
           >
             <button className="text-gray-300 hover:text-red-500 transition-colors duration-300 text-sm uppercase tracking-wider flex items-center gap-1">
-              Partners
+              Programs
               <ChevronDown size={16} className={cn("transition-transform", partnersDropdownOpen && "rotate-180")} />
             </button>
 
@@ -108,10 +108,10 @@ export function Navbar() {
                   ))}
                   <div className="border-t border-gray-800 mt-2 pt-2">
                     <Link
-                      href="/apply"
+                      href="/become-a-partner"
                       className="block px-4 py-2 text-red-400 hover:text-red-300 hover:bg-gray-900/50 transition-colors text-sm font-semibold"
                     >
-                      Apply Now
+                      Become a Partner
                     </Link>
                   </div>
                 </div>
@@ -126,12 +126,12 @@ export function Navbar() {
             Contact
           </button>
 
-          <Link href="/apply">
+          <Link href="/become-a-partner">
             <Button
               variant="outline"
               className="border-red-500 text-white hover:bg-red-500 hover:text-white transition-all duration-300 bg-transparent"
             >
-              Apply Now
+              Become a Dealer
             </Button>
           </Link>
         </nav>
@@ -168,7 +168,7 @@ export function Navbar() {
                 className="text-gray-300 hover:text-red-500 transition-colors duration-300 text-lg uppercase tracking-wider"
                 onClick={() => setMobileMenuOpen(false)}
               >
-                Partners
+                Programs
               </Link>
               <div className="flex flex-col items-center gap-2 pl-4">
                 {partnerLinks.map((link) => (
@@ -195,7 +195,7 @@ export function Navbar() {
             </button>
 
             <Link
-              href="/apply"
+              href="/become-a-partner"
               onClick={() => setMobileMenuOpen(false)}
               className="w-full max-w-xs"
             >
@@ -203,7 +203,7 @@ export function Navbar() {
                 variant="outline"
                 className="border-red-500 text-white hover:bg-red-500 hover:text-white transition-all duration-300 w-full bg-transparent"
               >
-                Apply Now
+                Become a Dealer
               </Button>
             </Link>
           </div>

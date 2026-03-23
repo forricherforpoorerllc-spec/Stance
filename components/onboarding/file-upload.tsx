@@ -3,6 +3,7 @@
 import React, { useState, useRef, useCallback } from "react"
 import { Upload, Camera, X, FileText, Check, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { upload } from "@vercel/blob/client"
 
 interface FileUploadProps {
   label: string
@@ -72,18 +73,12 @@ export function FileUpload({
       }
 
       try {
-        const formData = new FormData()
-        formData.append("file", file)
-
-        const res = await fetch("/api/upload", {
-          method: "POST",
-          body: formData,
+        const blob = await upload(file.name, file, {
+          access: "public",
+          handleUploadUrl: "/api/upload",
+          multipart: file.size > 5 * 1024 * 1024,
         })
-
-        if (!res.ok) throw new Error("Upload failed")
-
-        const data = await res.json()
-        onFileUploaded(data.url, file.name)
+        onFileUploaded(blob.url, file.name)
       } catch {
         setError("Upload failed. Please try again.")
         setPreview(null)

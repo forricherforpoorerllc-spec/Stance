@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
 import { put } from "@vercel/blob"
+import { handleUpload, type HandleUploadBody } from "@vercel/blob/client"
 
 export const runtime = "edge"
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10 MB
 const ALLOWED_TYPES = [
   "image/jpeg",
   "image/png",
@@ -13,6 +13,33 @@ const ALLOWED_TYPES = [
 ]
 
 export async function POST(req: NextRequest) {
+  const contentType = req.headers.get("content-type") ?? ""
+
+  // Client-side upload: browser uploads directly to Vercel Blob using a short-lived token.
+  // This bypasses the serverless function body-size limit for large photo files.
+  if (!contentType.includes("multipart/form-data")) {
+    const body = (await req.json()) as HandleUploadBody
+    try {
+      const jsonResponse = await handleUpload({
+        body,
+        request: req,
+        onBeforeGenerateToken: async (_pathname) => ({
+          allowedContentTypes: ALLOWED_TYPES,
+          maximumSizeInBytes: 20 * 1024 * 1024, // 20 MB
+          addRandomSuffix: true,
+        }),
+        onUploadCompleted: async () => {},
+      })
+      return NextResponse.json(jsonResponse)
+    } catch (error) {
+      return NextResponse.json(
+        { error: (error as Error).message },
+        { status: 400 }
+      )
+    }
+  }
+
+  // Server-side upload path — used by uploadOnboardingPDF (jsPDF output, always < 2 MB).
   try {
     const formData = await req.formData()
     const file = formData.get("file") as File | null
@@ -29,14 +56,6 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    if (file.size > MAX_FILE_SIZE) {
-      return NextResponse.json(
-        { error: "File exceeds 10 MB limit." },
-        { status: 400 }
-      )
-    }
-
-    // Build a clean filename: category-timestamp-originalname
     const timestamp = Date.now()
     const sanitizedName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_")
     const prefix = category ? `${category}/` : ""
@@ -47,10 +66,7 @@ export async function POST(req: NextRequest) {
       addRandomSuffix: true,
     })
 
-    return NextResponse.json({
-      url: blob.url,
-      pathname: blob.pathname,
-    })
+    return NextResponse.json({ url: blob.url, pathname: blob.pathname })
   } catch (error) {
     console.error("Upload error:", error)
     return NextResponse.json(

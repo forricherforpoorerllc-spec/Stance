@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useRef, useCallback, useState, useEffect } from "react"
-import { CheckSquare, Square, DollarSign, FileText } from "lucide-react"
+import { DollarSign, FileText } from "lucide-react"
 import { type CompensationExhibit } from "@/lib/exhibits"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -39,7 +39,7 @@ function fill(val: string | undefined, fallback = "_______________") {
 
 // ── Contract sections data ────────────────────────────────────────────────────
 
-const SECTIONS: { num: number; title: string; clauses: string[] }[] = [
+export const CONTRACT_SECTIONS: { num: number; title: string; clauses: string[] }[] = [
   {
     num: 1,
     title: "AGREEMENT DOCUMENTS AND ORDER OF PRECEDENCE",
@@ -241,7 +241,7 @@ const SECTIONS: { num: number; title: string; clauses: string[] }[] = [
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
-function SectionBlock({ section }: { section: (typeof SECTIONS)[number] }) {
+function SectionBlock({ section }: { section: (typeof CONTRACT_SECTIONS)[number] }) {
   return (
     <div className="mb-7">
       <h3 className="text-[11px] font-bold tracking-[0.2em] text-slate-500 uppercase mb-3">
@@ -348,7 +348,6 @@ export function ContractViewer({
     if (!el) return
     if (el.scrollTop + el.clientHeight >= el.scrollHeight - 120) {
       setHasScrolledToBottom(true)
-      onReadComplete()
     }
   }, [hasScrolledToBottom, onReadComplete])
 
@@ -358,7 +357,6 @@ export function ContractViewer({
     if (!el) return
     if (el.scrollHeight <= el.clientHeight + 120) {
       setHasScrolledToBottom(true)
-      onReadComplete()
     }
   }, [onReadComplete])
 
@@ -419,7 +417,7 @@ export function ContractViewer({
           </div>
 
           {/* Sections 1–17 */}
-          {SECTIONS.map((section) => (
+          {CONTRACT_SECTIONS.map((section) => (
             <SectionBlock key={section.num} section={section} />
           ))}
 
@@ -496,11 +494,16 @@ export function ContractViewer({
               <div className="rounded-xl border border-slate-200 bg-slate-50 p-5">
                 <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4">Company</p>
                 <p className="text-sm font-semibold text-slate-700 mb-4">Stance Marketing LLC</p>
+                <div className="mb-3 border border-slate-200 bg-white rounded-lg px-3 py-2">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/images/ron-rice-signature.svg" alt="Ron Rice signature" className="h-8 w-auto" />
+                </div>
                 {[
-                  "Authorized Signature: ________________",
-                  "Name: ________________",
-                  "Title: ________________",
-                  "Date: ________________",
+                  "Authorized Signature: Ron Rice",
+                  "Name: Ron Rice",
+                  "Title: President",
+                  "Address: 6871 Lakota Plaza Dr. Ste. 11, West Chester, OH 45069",
+                  `Date: ${fill(effectiveDate)}`,
                 ].map((line) => (
                   <p key={line} className="text-xs text-slate-500 mb-2">{line}</p>
                 ))}
@@ -522,27 +525,44 @@ export function ContractViewer({
         </div>{/* max-w-3xl */}
       </div>{/* scrollable */}
 
-      {/* ── Sticky acknowledgment bar ── */}
-      <div className="flex-shrink-0 border-t border-slate-200 bg-white px-5 sm:px-8 py-4">
+      {/* ── Sticky acknowledgment bar — amber when unchecked, green when acknowledged ── */}
+      <div
+        className={`flex-shrink-0 border-t-2 px-5 sm:px-8 py-4 transition-all ${
+          isReadComplete ? "border-green-400 bg-green-50" : "border-amber-300 bg-amber-50"
+        }`}
+      >
         <button
-          onClick={() => onAcknowledgeChange(!isReadComplete)}
-          className="flex items-start gap-3 w-full group text-left"
+          onClick={() => hasScrolledToBottom && onAcknowledgeChange(!isReadComplete)}
+          disabled={!hasScrolledToBottom}
+          className={`flex items-start gap-3 w-full group text-left transition-opacity ${!hasScrolledToBottom ? "opacity-50 cursor-not-allowed" : ""}`}
           aria-label="Toggle read acknowledgment"
         >
-          <div className="flex-shrink-0 mt-0.5">
-            {isReadComplete ? (
-              <CheckSquare className="h-5 w-5 text-emerald-600" />
-            ) : (
-              <Square className="h-5 w-5 text-slate-400 group-hover:text-slate-600 transition-colors" />
+          <div
+            className={`flex-shrink-0 mt-0.5 h-6 w-6 rounded border-2 flex items-center justify-center transition-all ${
+              isReadComplete ? "bg-green-500 border-green-500" : "bg-white border-amber-400 group-hover:border-amber-500"
+            }`}
+          >
+            {isReadComplete && (
+              <svg className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
             )}
           </div>
           <div>
-            <p className={`text-sm font-semibold transition-colors ${isReadComplete ? "text-emerald-700" : "text-slate-700"}`}>
+            <div className="flex items-center gap-2 mb-0.5">
+              {!isReadComplete && (
+                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-200 text-amber-800">Required to continue</span>
+              )}
+              {isReadComplete && (
+                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-green-200 text-green-800">Acknowledged ✓</span>
+              )}
+            </div>
+            <p className={`text-sm font-semibold transition-colors ${isReadComplete ? "text-green-800" : "text-amber-900"}`}>
               I have read and understood this Independent Contractor Agreement and all attached Compensation Exhibit(s).
             </p>
-            <p className="text-xs text-slate-400 mt-0.5">
+            <p className="text-xs text-slate-500 mt-0.5">
               {isReadComplete
-                ? "Acknowledged — tap Continue to proceed to your signature."
+                ? "Tap Continue to proceed to your signature."
                 : "Scroll to the bottom of the agreement or check this box to continue."}
             </p>
           </div>

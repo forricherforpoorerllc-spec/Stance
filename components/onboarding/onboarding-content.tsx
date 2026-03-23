@@ -1,13 +1,14 @@
 "use client"
 
-import React, { useState, useCallback } from "react"
+import React, { useState, useCallback, useEffect, useMemo } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { ContractViewer } from "@/components/onboarding/contract-viewer"
+import { upload } from "@vercel/blob/client"
+import { ContractViewer, CONTRACT_SECTIONS } from "@/components/onboarding/contract-viewer"
 import { SignaturePad } from "@/components/onboarding/signature-pad"
 import { FileUpload } from "@/components/onboarding/file-upload"
 import {
@@ -36,6 +37,26 @@ function formatPhone(raw: string): string {
   return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`
 }
 
+function formatDob(raw: string): string {
+  const digits = raw.replace(/\D/g, "").slice(0, 8)
+  if (digits.length > 4) return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`
+  if (digits.length > 2) return `${digits.slice(0, 2)}/${digits.slice(2)}`
+  return digits
+}
+
+function isAtLeast18(dob: string): boolean {
+  const parts = dob.split("/")
+  if (parts.length !== 3) return false
+  const month = parseInt(parts[0], 10)
+  const day = parseInt(parts[1], 10)
+  const year = parseInt(parts[2], 10)
+  if (!month || !day || !year || year < 1900) return false
+  const birth = new Date(year, month - 1, day)
+  const cutoff = new Date(birth)
+  cutoff.setFullYear(cutoff.getFullYear() + 18)
+  return new Date() >= cutoff
+}
+
 // ── Types ──
 
 const PROGRAM_LABELS: Record<string, string> = {
@@ -59,6 +80,7 @@ interface OnboardingData {
   token: string
   // contractor details
   legalName: string
+  dob: string
   dbaName: string
   entityType: string
   address: string
@@ -78,6 +100,7 @@ interface OnboardingData {
   tinType: "ssn" | "ein" | ""
   w9Certified: boolean
   exemptPayeeCode: string
+  w9SignatureDataUrl: string
 }
 
 const US_STATES = [
@@ -125,6 +148,7 @@ interface OnboardingContentProps {
     state?: string
     company?: string
     partnerType?: string
+    legalName?: string
   }
   exhibits?: CompensationExhibit[]
 }
@@ -146,7 +170,8 @@ export function OnboardingContent({ token, prefill, exhibits }: OnboardingConten
     company: prefill?.company || "",
     partnerType: prefill?.partnerType || "",
     token,
-    legalName: "",
+    legalName: prefill?.legalName || "",
+    dob: "",
     dbaName: "",
     entityType: "",
     address: "",
@@ -163,6 +188,7 @@ export function OnboardingContent({ token, prefill, exhibits }: OnboardingConten
     tinType: "",
     w9Certified: false,
     exemptPayeeCode: "",
+    w9SignatureDataUrl: "",
   })
 
   const effectiveDate = new Date().toLocaleDateString("en-US", {
@@ -193,6 +219,18 @@ export function OnboardingContent({ token, prefill, exhibits }: OnboardingConten
 
     if (step === 1) {
       if (!data.legalName.trim()) e.legalName = "Required"
+      if (!data.email.trim()) {
+        e.email = "Required"
+      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
+        e.email = "Enter a valid email address"
+      }
+      if (!data.dob.trim()) {
+        e.dob = "Required"
+      } else if (!/^\d{2}\/\d{2}\/\d{4}$/.test(data.dob)) {
+        e.dob = "Enter a valid date (MM/DD/YYYY)"
+      } else if (!isAtLeast18(data.dob)) {
+        e.dob = "Must be 18 years of age or older"
+      }
       if (!data.address.trim()) e.address = "Required"
       if (!data.city.trim()) e.city = "Required"
       if (!data.state) e.state = "Required"
@@ -218,6 +256,7 @@ export function OnboardingContent({ token, prefill, exhibits }: OnboardingConten
     if (step === 4) {
       if (!data.tinType) e.tinType = "Please select SSN or EIN"
       if (!data.w9Certified) e.w9Certified = "You must certify your W-9 information"
+      if (!data.w9SignatureDataUrl) e.w9Signature = "W-9 signature is required"
     }
 
     if (step === 5) {
@@ -232,8 +271,42 @@ export function OnboardingContent({ token, prefill, exhibits }: OnboardingConten
     return Object.keys(e).length === 0
   }, [step, data])
 
+  // Scroll to top of page whenever the step changes
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" })
+  }, [step])
+
+  // Determine if the current step has all required fields filled
+  const isStepReady = useMemo(() => {
+    if (step === 1) {
+      return !!(
+        data.legalName.trim() &&
+        /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email) &&
+        /^\d{2}\/\d{2}\/\d{4}$/.test(data.dob) &&
+        isAtLeast18(data.dob) &&
+        data.address.trim() &&
+        data.city.trim() &&
+        data.state &&
+        data.zipCode.trim() &&
+        /^\d{9}$/.test(data.einLast4)
+      )
+    }
+    if (step === 2) return data.isContractRead
+    if (step === 3) return !!(data.signatureDataUrl && data.isAcknowledged)
+    if (step === 4) return !!(data.tinType && data.w9Certified && data.w9SignatureDataUrl)
+    if (step === 5) return !!data.idDocUrl
+    if (step === 6) return !!data.badgePhotoUrl
+    return true
+  }, [step, data])
+
   const goNext = useCallback(() => {
-    if (!validateStep()) return
+    if (!validateStep()) {
+      setTimeout(() => {
+        const el = document.querySelector('[data-error="true"]')
+        if (el) el.scrollIntoView({ behavior: "smooth", block: "center" })
+      }, 60)
+      return
+    }
     setDirection(1)
     setStep((s) => Math.min(s + 1, TOTAL_STEPS))
   }, [validateStep])
@@ -267,10 +340,19 @@ export function OnboardingContent({ token, prefill, exhibits }: OnboardingConten
           onboardingPdfUrl,
         }),
       })
-      if (!res.ok) throw new Error("Submission failed")
+      if (!res.ok) {
+        const errorJson = await res.json().catch(() => null) as
+          | { error?: string; missingFields?: string[] }
+          | null
+        const detailedMessage = errorJson?.missingFields?.length
+          ? `Missing required fields: ${errorJson.missingFields.join(", ")}`
+          : errorJson?.error || "Submission failed"
+        throw new Error(detailedMessage)
+      }
       setIsComplete(true)
-    } catch {
-      setErrors({ submit: "Something went wrong. Please try again." })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Something went wrong. Please try again."
+      setErrors({ submit: message })
     } finally {
       setIsSubmitting(false)
     }
@@ -281,75 +363,85 @@ export function OnboardingContent({ token, prefill, exhibits }: OnboardingConten
 
   if (isComplete) {
     return (
-      <div className="min-h-screen bg-[#edf1f7] flex flex-col">
-        <div className="border-b border-slate-800/30 bg-slate-900/95 shadow-lg shadow-slate-900/20">
-          <div className="mx-auto max-w-3xl px-4 py-4">
+      <div className="min-h-screen bg-[radial-gradient(circle_at_top,_#dbeafe_0%,_#eef2ff_42%,_#f8fafc_100%)] flex flex-col">
+        <div className="border-b border-slate-800/30 bg-slate-900/95 backdrop-blur-xl">
+          <div className="mx-auto max-w-5xl px-4 py-4">
             <Image src="/images/stance-logo-white.png" alt="Stance Marketing" width={140} height={32} className="h-7 w-auto" />
           </div>
         </div>
-        <div className="flex-1 flex items-center justify-center px-4 py-12">
+
+        <div className="flex-1 px-4 py-8 sm:py-12">
           <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.4 }}
-            className="w-full max-w-md text-center"
+            initial={{ opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.45 }}
+            className="mx-auto max-w-5xl"
           >
-            <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-green-100 border-2 border-green-300">
-              <Check className="h-8 w-8 text-green-600" />
-            </div>
-            <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-3">Onboarding Complete</h1>
-            <p className="text-slate-700 text-base mb-3 leading-relaxed">
-              Welcome to Stance Marketing, <span className="font-bold text-slate-900">{data.firstName}</span>.
-            </p>
-            <p className="text-slate-600 text-sm mb-8 leading-relaxed">
-              Your signed agreement and documents have been received. Check your email for a copy. Your manager will be in touch within 24 hours.
-            </p>
+            <div className="rounded-3xl border border-slate-200/80 bg-white/90 shadow-[0_25px_70px_-35px_rgba(15,23,42,0.35)] overflow-hidden">
+              <div className="px-6 sm:px-10 pt-8 sm:pt-10 pb-6 bg-gradient-to-r from-emerald-600 to-teal-600 text-white">
+                <div className="flex items-start gap-4">
+                  <div className="h-14 w-14 rounded-2xl bg-white/20 border border-white/30 flex items-center justify-center flex-shrink-0">
+                    <Check className="h-7 w-7" />
+                  </div>
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.2em] font-semibold text-emerald-100 mb-1">Onboarding Completed</p>
+                    <h1 className="text-2xl sm:text-4xl font-extrabold leading-tight">Welcome to Stance, {data.firstName || "Partner"}</h1>
+                    <p className="mt-2 text-emerald-50/95 text-sm sm:text-base max-w-2xl">
+                      Your agreement is fully executed and your onboarding package is ready.
+                      Download your complete signed contract packet below.
+                    </p>
+                  </div>
+                </div>
+              </div>
 
-            <div className="mb-8 space-y-3 text-left">
-              <div className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-red-50">
-                  <FileText className="h-5 w-5 text-red-500" />
+              <div className="px-6 sm:px-10 py-7 sm:py-8">
+                <div className="grid sm:grid-cols-3 gap-3 sm:gap-4 mb-7">
+                  {[
+                    { title: "Contract", note: "Signed and included", tone: "bg-emerald-50 border-emerald-200 text-emerald-900" },
+                    { title: "W-9", note: "Certified and signed", tone: "bg-blue-50 border-blue-200 text-blue-900" },
+                    { title: "Photos", note: "ID + badge embedded", tone: "bg-violet-50 border-violet-200 text-violet-900" },
+                  ].map((item) => (
+                    <div key={item.title} className={`rounded-2xl border p-4 ${item.tone}`}>
+                      <p className="text-xs uppercase tracking-wider font-semibold opacity-75">Included in PDF</p>
+                      <p className="text-lg font-bold mt-1">{item.title}</p>
+                      <p className="text-sm mt-0.5 opacity-90">{item.note}</p>
+                    </div>
+                  ))}
                 </div>
-                <p className="text-base text-slate-800 font-medium">Signed contract sent to your email</p>
-              </div>
-              <div className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-blue-50">
-                  <FileText className="h-5 w-5 text-blue-600" />
-                </div>
-                <p className="text-base text-slate-800 font-medium">W-9 tax certification on file</p>
-              </div>
-              <div className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-green-50">
-                  <Shield className="h-5 w-5 text-green-600" />
-                </div>
-                <p className="text-base text-slate-800 font-medium">Documents securely stored and encrypted</p>
-              </div>
-            </div>
 
-            <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <Button
-                disabled={isDownloading}
-                onClick={async () => {
-                  setIsDownloading(true)
-                  try {
-                    await downloadOnboardingPDF(data, programLabel, contractorName, effectiveDate)
-                  } finally {
-                    setIsDownloading(false)
-                  }
-                }}
-                className="bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-xl px-6 h-11 disabled:opacity-60"
-              >
-                {isDownloading ? (
-                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Generating PDF…</>
-                ) : (
-                  <><Download className="mr-2 h-4 w-4" />Download PDF</>
-                )}
-              </Button>
-              <Link href="/">
-                <Button variant="outline" className="border-slate-300 text-slate-800 hover:bg-slate-100 rounded-xl text-base px-6 h-11 w-full sm:w-auto">
-                  Return Home
-                </Button>
-              </Link>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <Button
+                    disabled={isDownloading}
+                    onClick={async () => {
+                      setIsDownloading(true)
+                      try {
+                        await downloadOnboardingPDF(data, programLabel, contractorName, effectiveDate)
+                      } finally {
+                        setIsDownloading(false)
+                      }
+                    }}
+                    className="h-12 rounded-xl px-6 bg-slate-900 hover:bg-black text-white font-semibold"
+                  >
+                    {isDownloading ? (
+                      <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Generating Complete PDF…</>
+                    ) : (
+                      <><Download className="mr-2 h-4 w-4" />Download Full Signed Packet</>
+                    )}
+                  </Button>
+
+                  <Link href="/" className="w-full sm:w-auto">
+                    <Button className="h-12 w-full sm:w-auto rounded-xl px-6 bg-white border border-slate-300 text-slate-800 hover:bg-slate-50 font-semibold">
+                      Return Home
+                    </Button>
+                  </Link>
+                </div>
+
+                <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                  <p className="text-sm text-slate-700">
+                    A copy has also been sent to <span className="font-semibold">{data.email}</span>. Your manager will follow up within 24 hours.
+                  </p>
+                </div>
+              </div>
             </div>
           </motion.div>
         </div>
@@ -465,6 +557,9 @@ export function OnboardingContent({ token, prefill, exhibits }: OnboardingConten
               Step 2 of {TOTAL_STEPS} — Contract Review
             </p>
             <h2 className="text-lg sm:text-xl font-bold text-slate-900">Review Your Agreement</h2>
+            <p className="text-sm text-slate-500 mt-0.5">
+              Read the full agreement below, then check the acknowledgment box at the bottom to continue.
+            </p>
           </div>
           {/* Contract card — fills remaining space */}
           <div className="flex-1 min-h-0 mx-auto w-full max-w-5xl px-3 sm:px-4 pb-2 flex flex-col">
@@ -482,7 +577,7 @@ export function OnboardingContent({ token, prefill, exhibits }: OnboardingConten
               contractorDba={data.dbaName}
               programLabel={programLabel}
               effectiveDate={effectiveDate}
-              onReadComplete={() => updateField("isContractRead", true)}
+              onReadComplete={() => {}}
               onAcknowledgeChange={(checked) => updateField("isContractRead", checked)}
               isReadComplete={data.isContractRead}
               exhibits={exhibits}
@@ -490,7 +585,12 @@ export function OnboardingContent({ token, prefill, exhibits }: OnboardingConten
             </div>
           </div>
           {errors.contract && (
-            <p className="mx-auto w-full max-w-5xl px-3 sm:px-4 text-red-500 text-sm mt-1">{errors.contract}</p>
+            <div data-error="true" className="mx-auto w-full max-w-5xl px-3 sm:px-4 mt-1">
+              <p className="border border-red-200 bg-red-50 rounded-xl px-4 py-2.5 text-red-600 text-sm font-medium flex items-center gap-2">
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0" />
+                {errors.contract}
+              </p>
+            </div>
           )}
         </div>
       ) : (
@@ -553,14 +653,18 @@ export function OnboardingContent({ token, prefill, exhibits }: OnboardingConten
           )}
 
           {errors.submit && (
-            <p className="text-red-400 text-sm">{errors.submit}</p>
+            <p className="text-red-400 text-sm font-medium border border-red-500/30 bg-red-500/10 px-3 py-1.5 rounded-lg">{errors.submit}</p>
           )}
 
           {step < TOTAL_STEPS ? (
             <Button
               onClick={goNext}
               disabled={step === 2 && !data.isContractRead}
-              className="flex-1 sm:flex-none bg-red-500 hover:bg-red-400 text-white font-semibold rounded-xl px-8 h-11 shadow-lg shadow-red-500/40 transition-all disabled:opacity-50"
+              className={`flex-1 sm:flex-none font-semibold rounded-xl px-8 h-11 shadow-lg transition-all disabled:opacity-50 text-white ${
+                isStepReady
+                  ? "bg-emerald-500 hover:bg-emerald-400 shadow-emerald-500/40"
+                  : "bg-red-500 hover:bg-red-400 shadow-red-500/40"
+              }`}
             >
               Continue
               <ArrowRight className="ml-2 h-4 w-4" />
@@ -569,7 +673,7 @@ export function OnboardingContent({ token, prefill, exhibits }: OnboardingConten
             <Button
               onClick={handleSubmit}
               disabled={isSubmitting}
-              className="flex-1 sm:flex-none bg-red-500 hover:bg-red-400 text-white font-semibold rounded-xl px-8 h-11 shadow-lg shadow-red-500/40 transition-all disabled:opacity-50"
+              className="flex-1 sm:flex-none bg-emerald-500 hover:bg-emerald-400 text-white font-semibold rounded-xl px-8 h-11 shadow-lg shadow-emerald-500/40 transition-all disabled:opacity-50"
             >
               {isSubmitting ? (
                 <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Submitting</>
@@ -598,13 +702,18 @@ function FormField({
   children: React.ReactNode
 }) {
   return (
-    <div>
+    <div data-error={error ? "true" : undefined}>
       <Label className="text-base text-slate-700 mb-2 block font-semibold">
         {label}
         {required && <span className="text-red-500 ml-1">*</span>}
       </Label>
       {children}
-      {error && <p className="text-red-500 text-sm mt-1.5">{error}</p>}
+      {error && (
+        <p className="text-red-600 text-sm mt-1.5 flex items-center gap-1.5 font-medium">
+          <span className="inline-block w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0" />
+          {error}
+        </p>
+      )}
     </div>
   )
 }
@@ -633,14 +742,35 @@ function StepDetails({
       </div>
 
       <div className="space-y-5">
-        <FormField label="Legal name (individual or entity)" required error={errors.legalName}>
+        <FormField label="Legal full name" required error={errors.legalName}>
           <Input
             value={data.legalName}
             onChange={(e) => onChange("legalName", e.target.value)}
-            placeholder={`${data.firstName} ${data.lastName}`.trim() || "Full legal name"}
+            placeholder={data.legalName || `${data.firstName} ${data.lastName}`.trim() || "Your full legal name"}
             className="bg-white border border-slate-300 text-slate-900 h-12 rounded-xl text-base shadow-sm focus:border-red-400 focus:ring-2 focus:ring-red-100 placeholder:text-slate-400"
           />
         </FormField>
+
+        <div className="grid sm:grid-cols-2 gap-4">
+          <FormField label="Email address" required error={errors.email}>
+            <Input
+              type="email"
+              value={data.email}
+              onChange={(e) => onChange("email", e.target.value)}
+              placeholder="your@email.com"
+              className="bg-white border border-slate-300 text-slate-900 h-12 rounded-xl text-base shadow-sm focus:border-red-400 focus:ring-2 focus:ring-red-100 placeholder:text-slate-400"
+            />
+          </FormField>
+          <FormField label="Phone number" error={errors.phone}>
+            <Input
+              type="tel"
+              value={data.phone}
+              onChange={(e) => onChange("phone", formatPhone(e.target.value))}
+              placeholder="(555) 555-5555"
+              className="bg-white border border-slate-300 text-slate-900 h-12 rounded-xl text-base shadow-sm focus:border-red-400 focus:ring-2 focus:ring-red-100 placeholder:text-slate-400"
+            />
+          </FormField>
+        </div>
 
         <div className="grid sm:grid-cols-2 gap-4">
           <FormField label="Business / DBA name">
@@ -715,28 +845,31 @@ function StepDetails({
           </FormField>
         </div>
 
-        <FormField label="Phone number" error={errors.phone}>
-          <Input
-            type="tel"
-            value={data.phone}
-            onChange={(e) => onChange("phone", formatPhone(e.target.value))}
-            placeholder="(555) 555-5555"
-            className="bg-white border border-slate-300 text-slate-900 h-12 rounded-xl text-base shadow-sm focus:border-red-400 focus:ring-2 focus:ring-red-100 placeholder:text-slate-400 max-w-xs"
-          />
-        </FormField>
-
-        <FormField label="EIN or SSN (9 digits)" required error={errors.einLast4}>
-          <Input
-            value={data.einLast4}
-            onChange={(e) => {
-              const v = e.target.value.replace(/\D/g, "").slice(0, 9)
-              onChange("einLast4", v)
-            }}
-            placeholder="9 digits"
-            maxLength={9}
-            className="bg-white border border-slate-300 text-slate-900 h-12 rounded-xl text-base shadow-sm focus:border-red-400 focus:ring-2 focus:ring-red-100 placeholder:text-slate-400 max-w-xs"
-          />
-        </FormField>
+        <div className="grid sm:grid-cols-2 gap-4">
+          <FormField label="Date of birth" required error={errors.dob}>
+            <Input
+              value={data.dob}
+              onChange={(e) => onChange("dob", formatDob(e.target.value))}
+              placeholder="MM/DD/YYYY"
+              inputMode="numeric"
+              maxLength={10}
+              className="bg-white border border-slate-300 text-slate-900 h-12 rounded-xl text-base shadow-sm focus:border-red-400 focus:ring-2 focus:ring-red-100 placeholder:text-slate-400"
+            />
+          </FormField>
+          <FormField label="EIN or SSN (9 digits)" required error={errors.einLast4}>
+            <Input
+              value={data.einLast4}
+              onChange={(e) => {
+                const v = e.target.value.replace(/\D/g, "").slice(0, 9)
+                onChange("einLast4", v)
+              }}
+              placeholder="9 digits"
+              maxLength={9}
+              inputMode="numeric"
+              className="bg-white border border-slate-300 text-slate-900 h-12 rounded-xl text-base shadow-sm focus:border-red-400 focus:ring-2 focus:ring-red-100 placeholder:text-slate-400"
+            />
+          </FormField>
+        </div>
 
         <div className="border border-slate-200 bg-slate-50 p-4 mt-5 rounded-xl">
           <div className="flex items-start gap-3">
@@ -779,10 +912,20 @@ function StepSignature({
       </div>
 
       {errors.signature && (
-        <p className="text-red-500 text-sm mb-4">{errors.signature}</p>
+        <div data-error="true" className="mb-4 border border-red-200 bg-red-50 rounded-xl px-4 py-2.5">
+          <p className="text-red-600 text-sm font-medium flex items-center gap-2">
+            <span className="inline-block w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0" />
+            {errors.signature}
+          </p>
+        </div>
       )}
       {errors.acknowledge && (
-        <p className="text-red-500 text-sm mb-4">{errors.acknowledge}</p>
+        <div data-error="true" className="mb-4 border border-red-200 bg-red-50 rounded-xl px-4 py-2.5">
+          <p className="text-red-600 text-sm font-medium flex items-center gap-2">
+            <span className="inline-block w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0" />
+            {errors.acknowledge}
+          </p>
+        </div>
       )}
 
       <SignaturePad
@@ -822,7 +965,12 @@ function StepIdUpload({
       </div>
 
       {errors.idDoc && (
-        <p className="text-red-500 text-sm mb-4">{errors.idDoc}</p>
+        <div data-error="true" className="mb-4 border border-red-200 bg-red-50 rounded-xl px-4 py-2.5">
+          <p className="text-red-600 text-sm font-medium flex items-center gap-2">
+            <span className="inline-block w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0" />
+            {errors.idDoc}
+          </p>
+        </div>
       )}
 
       <FileUpload
@@ -876,7 +1024,12 @@ function StepBadgePhoto({
       </div>
 
       {errors.badgePhoto && (
-        <p className="text-red-500 text-sm mb-4">{errors.badgePhoto}</p>
+        <div data-error="true" className="mb-4 border border-red-200 bg-red-50 rounded-xl px-4 py-2.5">
+          <p className="text-red-600 text-sm font-medium flex items-center gap-2">
+            <span className="inline-block w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0" />
+            {errors.badgePhoto}
+          </p>
+        </div>
       )}
 
       <FileUpload
@@ -1051,6 +1204,147 @@ function StepReview({
 
 // ── Step 4: W-9 Tax Information ──
 
+// Lightweight inline signature capture for W-9 (independent of contract signature)
+function W9SignaturePad({
+  contractorName,
+  signatureDataUrl,
+  onSignatureComplete,
+}: {
+  contractorName: string
+  signatureDataUrl: string
+  onSignatureComplete: (url: string) => void
+}) {
+  const canvasRef = React.useRef<HTMLCanvasElement>(null)
+  const [isDrawing, setIsDrawing] = React.useState(false)
+  const [hasDrawn, setHasDrawn] = React.useState(false)
+  const hasDrawnRef = React.useRef(false)
+  const [typedName, setTypedName] = React.useState("")
+  const [mode, setMode] = React.useState<"draw" | "type">("draw")
+  const lastPos = React.useRef<{ x: number; y: number } | null>(null)
+
+  const setupCanvas = React.useCallback(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const parent = canvas.parentElement
+    if (!parent) return
+    const dpr = window.devicePixelRatio || 1
+    const rect = parent.getBoundingClientRect()
+    canvas.width = rect.width * dpr
+    canvas.height = rect.height * dpr
+    canvas.style.width = `${rect.width}px`
+    canvas.style.height = `${rect.height}px`
+    const ctx = canvas.getContext("2d")
+    if (ctx) { ctx.scale(dpr, dpr); ctx.strokeStyle = "#1f2937"; ctx.lineWidth = 2; ctx.lineCap = "round"; ctx.lineJoin = "round" }
+  }, [])
+
+  React.useEffect(() => {
+    setupCanvas()
+    window.addEventListener("resize", setupCanvas)
+    return () => window.removeEventListener("resize", setupCanvas)
+  }, [setupCanvas])
+
+  const getPos = (e: React.TouchEvent | React.MouseEvent) => {
+    const canvas = canvasRef.current
+    if (!canvas) return { x: 0, y: 0 }
+    const rect = canvas.getBoundingClientRect()
+    if ("touches" in e) return { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top }
+    return { x: (e as React.MouseEvent).clientX - rect.left, y: (e as React.MouseEvent).clientY - rect.top }
+  }
+
+  const startDraw = (e: React.TouchEvent | React.MouseEvent) => { e.preventDefault(); setIsDrawing(true); lastPos.current = getPos(e) }
+  const draw = (e: React.TouchEvent | React.MouseEvent) => {
+    if (!isDrawing || !lastPos.current) return
+    e.preventDefault()
+    const ctx = canvasRef.current?.getContext("2d")
+    if (!ctx) return
+    const pos = getPos(e)
+    ctx.beginPath(); ctx.moveTo(lastPos.current.x, lastPos.current.y); ctx.lineTo(pos.x, pos.y); ctx.stroke()
+    lastPos.current = pos
+    if (!hasDrawnRef.current) { hasDrawnRef.current = true; setHasDrawn(true) }
+  }
+  const endDraw = () => {
+    setIsDrawing(false); lastPos.current = null
+    if (hasDrawnRef.current && canvasRef.current) onSignatureComplete(canvasRef.current.toDataURL("image/png"))
+  }
+  const clearCanvas = () => {
+    const canvas = canvasRef.current; const ctx = canvas?.getContext("2d")
+    if (!ctx || !canvas) return
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
+    hasDrawnRef.current = false; setHasDrawn(false); onSignatureComplete("")
+  }
+  const generateTyped = React.useCallback((name: string) => {
+    if (!name.trim()) { onSignatureComplete(""); return }
+    const canvas = document.createElement("canvas"); const dpr = window.devicePixelRatio || 1
+    canvas.width = 600 * dpr; canvas.height = 120 * dpr
+    const ctx = canvas.getContext("2d")
+    if (!ctx) return
+    ctx.scale(dpr, dpr); ctx.fillStyle = "#1f2937"; ctx.font = "italic 42px 'Georgia', 'Times New Roman', serif"
+    ctx.textBaseline = "middle"; ctx.fillText(name, 16, 60)
+    onSignatureComplete(canvas.toDataURL("image/png"))
+  }, [onSignatureComplete])
+
+  return (
+    <div>
+      <div className="flex gap-2 mb-4">
+        {(["draw", "type"] as const).map((m) => (
+          <button key={m} type="button" onClick={() => setMode(m)}
+            className={`px-4 py-1.5 rounded-lg text-sm font-semibold border transition-all ${
+              mode === m ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-600 border-slate-300 hover:bg-slate-50"
+            }`}
+          >{m === "draw" ? "Draw" : "Type"}</button>
+        ))}
+      </div>
+
+      {mode === "draw" && (
+        <>
+          <div className="relative border-2 border-slate-300 bg-white rounded-xl overflow-hidden" style={{ height: "140px" }}>
+            <div className="absolute bottom-10 left-6 right-6 border-b border-slate-300" />
+            <p className="absolute bottom-3 left-6 text-xs text-slate-400">Sign above this line</p>
+            <canvas ref={canvasRef} className="absolute inset-0 cursor-crosshair touch-none"
+              onMouseDown={startDraw} onMouseMove={draw} onMouseUp={endDraw} onMouseLeave={endDraw}
+              onTouchStart={startDraw} onTouchMove={draw} onTouchEnd={endDraw}
+            />
+            {!hasDrawn && (
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <p className="text-slate-400 text-sm">Draw your signature here</p>
+              </div>
+            )}
+          </div>
+          {hasDrawn && (
+            <button type="button" onClick={clearCanvas} className="mt-2 text-xs text-slate-400 hover:text-slate-600 flex items-center gap-1">
+              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+              Clear
+            </button>
+          )}
+        </>
+      )}
+
+      {mode === "type" && (
+        <div className="space-y-3">
+          <Input
+            value={typedName}
+            onChange={(e) => { setTypedName(e.target.value); generateTyped(e.target.value) }}
+            placeholder={contractorName || "Type your full legal name"}
+            className="bg-white border border-slate-300 text-slate-900 h-11 rounded-xl text-base focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
+          />
+          {typedName && (
+            <div className="border border-slate-200 bg-slate-50 px-4 py-3 rounded-xl min-h-[56px] flex items-center">
+              <p className="text-slate-900 text-3xl italic" style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}>{typedName}</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {signatureDataUrl && mode === "draw" && !hasDrawn && (
+        <div className="mt-3 border border-slate-200 bg-slate-50 p-3 rounded-xl">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={signatureDataUrl} alt="W-9 signature" className="max-h-10 w-auto" />
+        </div>
+      )}
+    </div>
+  )
+}
+
 function formatTin(tin: string, type: "ssn" | "ein" | ""): string {
   if (!tin || tin.length !== 9) return tin
   if (type === "ssn") return `${tin.slice(0, 3)}-${tin.slice(3, 5)}-${tin.slice(5)}`
@@ -1080,6 +1374,15 @@ function StepW9({
           Complete your W-9 for tax reporting. Your details have been pre-filled from Step 1.
         </p>
       </div>
+
+      {errors.w9Signature && (
+        <div data-error="true" className="mb-4 border border-red-200 bg-red-50 rounded-xl px-4 py-2.5">
+          <p className="text-red-600 text-sm font-medium flex items-center gap-2">
+            <span className="inline-block w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0" />
+            {errors.w9Signature}
+          </p>
+        </div>
+      )}
 
       <div className="space-y-5">
         {/* Pre-filled info confirmation */}
@@ -1124,12 +1427,14 @@ function StepW9({
                 onClick={() => onChange("tinType", type)}
                 className={`h-16 rounded-xl border-2 text-sm font-semibold transition-all px-4 text-left flex flex-col justify-center ${
                   data.tinType === type
-                    ? "border-red-400 bg-red-50 text-red-700"
+                    ? "border-green-500 bg-green-50 text-green-800 shadow-md shadow-green-100"
+                    : errors.tinType
+                    ? "border-red-200 bg-white text-slate-700 hover:border-red-300"
                     : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
                 }`}
               >
                 <span className="block">{type === "ssn" ? "Social Security Number" : "Employer ID Number"}</span>
-                <span className="block text-xs font-normal mt-0.5 opacity-60">{type === "ssn" ? "SSN — for individuals" : "EIN — for businesses / LLCs"}</span>
+                <span className="block text-xs font-normal mt-1 text-current/70">{type === "ssn" ? "For individuals & sole proprietors" : "For LLCs, corporations & partnerships"}</span>
               </button>
             ))}
           </div>
@@ -1164,36 +1469,78 @@ function StepW9({
           <p className="text-xs text-slate-400 mt-1.5">Most individual contractors leave this blank.</p>
         </FormField>
 
-        {/* W-9 Certification */}
+        {/* W-9 Certification — prominent, amber when unchecked, green when checked */}
         <div
           role="button"
           tabIndex={0}
           onClick={() => onChange("w9Certified", !data.w9Certified)}
           onKeyDown={(e) => { if (e.key === " " || e.key === "Enter") onChange("w9Certified", !data.w9Certified) }}
+          data-error={errors.w9Certified ? "true" : undefined}
           className={`border-2 rounded-2xl p-5 cursor-pointer transition-all ${
             errors.w9Certified
-              ? "border-red-300 bg-red-50"
+              ? "border-red-400 bg-red-50 ring-2 ring-red-100"
               : data.w9Certified
-              ? "border-red-400 bg-red-50"
-              : "border-slate-200 bg-slate-50 hover:border-slate-300"
+              ? "border-green-400 bg-green-50"
+              : "border-amber-300 bg-amber-50 hover:border-amber-400"
           }`}
         >
           <div className="flex items-start gap-4">
-            <div className={`mt-0.5 flex-shrink-0 h-5 w-5 rounded border-2 flex items-center justify-center transition-all ${
-              data.w9Certified ? "bg-red-500 border-red-500" : "bg-white border-slate-300"
+            <div className={`mt-0.5 flex-shrink-0 h-6 w-6 rounded border-2 flex items-center justify-center transition-all ${
+              data.w9Certified ? "bg-green-500 border-green-500" : errors.w9Certified ? "bg-white border-red-400" : "bg-white border-amber-400"
             }`}>
-              {data.w9Certified && <Check className="h-3 w-3 text-white" />}
+              {data.w9Certified && <Check className="h-4 w-4 text-white" />}
             </div>
-            <div>
-              <p className="text-sm font-bold text-slate-900 mb-1.5">W-9 Certification</p>
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-1.5">
+                <p className={`text-sm font-bold ${
+                  data.w9Certified ? "text-green-800" : errors.w9Certified ? "text-red-700" : "text-amber-900"
+                }`}>W-9 Certification</p>
+                {!data.w9Certified && (
+                  <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                    errors.w9Certified ? "bg-red-100 text-red-700" : "bg-amber-200 text-amber-800"
+                  }`}>Required</span>
+                )}
+                {data.w9Certified && (
+                  <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-green-200 text-green-800">Certified ✓</span>
+                )}
+              </div>
               <p className="text-sm text-slate-600 leading-relaxed">
                 Under penalties of perjury, I certify that: (1) the number shown on this form is my correct taxpayer identification number (or I am waiting for a number to be issued to me); (2) I am not subject to backup withholding; and (3) I am a U.S. citizen or other U.S. person.
               </p>
             </div>
           </div>
           {errors.w9Certified && (
-            <p className="text-red-500 text-xs mt-2 ml-9">{errors.w9Certified}</p>
+            <p className="text-red-600 text-xs mt-2 ml-10 flex items-center gap-1.5 font-medium">
+              <span className="inline-block w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0" />
+              {errors.w9Certified}
+            </p>
           )}
+        </div>
+
+        {/* W-9 Signature + Auto Date — independent of the contract signature */}
+        <div className="border border-slate-200 rounded-2xl overflow-hidden">
+          <div className="bg-slate-50 px-5 py-3 border-b border-slate-200">
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-[0.2em]">W-9 Signature &amp; Date</p>
+            <p className="text-xs text-slate-400 mt-0.5">Sign here to certify your W-9 tax information. This is separate from your contract signature.</p>
+          </div>
+          <div className="p-5">
+            <W9SignaturePad
+              contractorName={data.legalName || `${data.firstName} ${data.lastName}`.trim()}
+              signatureDataUrl={data.w9SignatureDataUrl}
+              onSignatureComplete={(url: string) => onChange("w9SignatureDataUrl", url)}
+            />
+            <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-4">
+              <div>
+                <p className="text-xs text-slate-400 font-semibold uppercase tracking-wide mb-0.5">Date</p>
+                <p className="text-base font-semibold text-slate-900">
+                  {new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
+                </p>
+              </div>
+              {data.w9SignatureDataUrl && (
+                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-green-100 text-green-700">Signed ✓</span>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Reference PDF link — official IRS document */}
@@ -1226,19 +1573,40 @@ async function buildOnboardingPDF(
   const contentW = pageW - margin * 2
   let y = margin
 
+  const companyAddress = "6871 Lakota Plaza Dr. Ste. 11, West Chester, OH 45069"
   const tinFormatted = data.einLast4
     ? data.tinType === "ssn"
-      ? `**-**-${data.einLast4.slice(-4)}`
-      : `**-***${data.einLast4.slice(-4)}`
+      ? data.einLast4.replace(/^(\d{3})(\d{2})(\d{4})$/, "$1-$2-$3")
+      : data.einLast4.replace(/^(\d{2})(\d{7})$/, "$1-$2")
     : "—"
 
-  // ── helpers ──
+  // Brand accent
+  const RED = "#ef4444"
+  const RUNNING_H = 13   // running header height on pages 2+
+  let rowParity = 0
+
   const addPage = () => {
     doc.addPage()
-    y = margin
+    rowParity = 0
+    // Dark running header band
+    doc.setFillColor("#0f172a")
+    doc.rect(0, 0, pageW, RUNNING_H, "F")
+    doc.setFillColor(RED)
+    doc.rect(0, RUNNING_H, pageW, 0.7, "F")
+    doc.setFont("helvetica", "bold")
+    doc.setFontSize(7)
+    doc.setTextColor("#ffffff")
+    doc.text("STANCE MARKETING LLC", margin, RUNNING_H - 4)
+    doc.setFont("helvetica", "normal")
+    doc.setFontSize(6.5)
+    doc.setTextColor("#94a3b8")
+    doc.text("Independent Contractor Agreement — Confidential", pageW - margin, RUNNING_H - 4, { align: "right" })
+    doc.setFont("helvetica", "normal")
+    doc.setTextColor("#0f172a")
+    y = RUNNING_H + 8
   }
   const checkPageBreak = (needed = 10) => {
-    if (y + needed > pageH - margin) addPage()
+    if (y + needed > pageH - 16) addPage()  // leave room for footer
   }
   const line = (x1: number, y1: number, x2: number, y2: number, color = "#e2e8f0") => {
     doc.setDrawColor(color)
@@ -1254,127 +1622,317 @@ async function buildOnboardingPDF(
     if (options?.size) doc.setFontSize(options.size)
     doc.setFont("helvetica", options?.bold ? "bold" : "normal")
     doc.text(str, x, ty, { align: options?.align || "left" })
-    doc.setTextColor("#1e293b")
+    doc.setTextColor("#0f172a")
     doc.setFont("helvetica", "normal")
   }
   const sectionHeader = (title: string) => {
-    checkPageBreak(14)
-    doc.setFillColor("#f8fafc")
-    doc.setDrawColor("#e2e8f0")
-    doc.rect(margin, y, contentW, 8, "FD")
-    text(title, margin + 4, y + 5.5, { size: 8, bold: true, color: "#64748b" })
-    y += 8
+    checkPageBreak(16)
+    doc.setFillColor("#fff1f2")
+    doc.rect(margin, y, contentW, 10, "F")
+    doc.setFillColor(RED)
+    doc.rect(margin, y, 3.5, 10, "F")
+    text(title, margin + 7, y + 7, { size: 9, bold: true, color: "#0f172a" })
+    y += 14
+    rowParity = 0
   }
   const row = (label: string, value: string) => {
     const rowH = 9
     checkPageBreak(rowH + 1)
-    text(label, margin + 4, y + 6, { size: 9, color: "#64748b" })
-    text(value, pageW - margin - 4, y + 6, { align: "right", size: 9, bold: true, color: "#1e293b" })
-    line(margin, y + rowH, pageW - margin, y + rowH)
+    doc.setFillColor(rowParity % 2 === 0 ? "#f8fafc" : "#ffffff")
+    doc.rect(margin, y, contentW, rowH, "F")
+    text(label, margin + 4, y + 6, { size: 8.5, color: "#64748b" })
+    text(value || "—", pageW - margin - 4, y + 6, { align: "right", size: 8.5, bold: true, color: "#0f172a" })
+    doc.setDrawColor("#e9edf2")
+    doc.line(margin, y + rowH, pageW - margin, y + rowH)
+    rowParity++
     y += rowH
   }
-
-  // ── Header ──
-  doc.setFillColor("#ef4444")
-  doc.rect(0, 0, pageW, 18, "F")
-  text("STANCE MARKETING LLC", margin, 11, { size: 14, bold: true, color: "#ffffff" })
-  text("Independent Contractor Onboarding", pageW - margin, 11, { align: "right", size: 9, color: "#fecaca" })
-  y = 26
-
-  text("Onboarding Summary", margin, y, { size: 16, bold: true })
-  y += 6
-  text(effectiveDate, margin, y, { size: 9, color: "#64748b" })
-  y += 10
-  line(margin, y, pageW - margin, y)
-  y += 8
-
-  // ── Contractor Details ──
-  sectionHeader("CONTRACTOR DETAILS")
-  row("Legal name", contractorName)
-  if (data.dbaName) row("Business / DBA", data.dbaName)
-  if (data.entityType) row("Entity type", data.entityType)
-  row("Address", `${data.address}, ${data.city}, ${data.state} ${data.zipCode}`)
-  row("Email", data.email)
-  if (data.phone) row("Phone", data.phone)
-  y += 6
-
-  // ── W-9 Tax Information ──
-  sectionHeader("W-9 TAX INFORMATION")
-  row("TIN type", data.tinType === "ssn" ? "Social Security Number (SSN)" : data.tinType === "ein" ? "Employer ID Number (EIN)" : "—")
-  row("TIN (masked)", tinFormatted)
-  row("W-9 certified", data.w9Certified ? "Yes — certified under penalties of perjury" : "No")
-  if (data.exemptPayeeCode) row("Exempt payee code", data.exemptPayeeCode)
-  y += 6
-
-  // ── Agreement ──
-  sectionHeader("INDEPENDENT CONTRACTOR AGREEMENT")
-  row("Program", programLabel)
-  row("Effective date", effectiveDate)
-  row("Agreement reviewed", data.isContractRead ? "Yes" : "No")
-  row("Acknowledgment", data.isAcknowledged ? "Accepted" : "Pending")
-  y += 6
-
-  // ── Documents ──
-  sectionHeader("UPLOADED DOCUMENTS")
-  row("Government-issued ID", data.idDocName || "Not uploaded")
-  row("Badge photo", data.badgePhotoName || "Not uploaded")
-  y += 8
-
-  // ── Signature ──
-  if (data.signatureDataUrl) {
-    checkPageBreak(50)
-    doc.setDrawColor("#e2e8f0")
-    doc.setFillColor("#f8fafc")
-    doc.rect(margin, y, contentW, 8, "FD")
-    text("ELECTRONIC SIGNATURE", margin + 4, y + 5.5, { size: 8, bold: true, color: "#64748b" })
-    y += 8
-
-    const sigMaxW = 90
-    const sigMaxH = 28
+  const paragraph = (value: string, size = 9, color = "#334155") => {
+    const lines = doc.splitTextToSize(value, contentW)
+    for (const ln of lines) {
+      checkPageBreak(5.5)
+      text(ln, margin, y, { size, color })
+      y += 4.8
+    }
+  }
+  const loadImageAsDataUrl = async (src: string): Promise<string | null> => {
     try {
-      doc.addImage(data.signatureDataUrl, "PNG", margin + 4, y + 4, sigMaxW, sigMaxH, "", "FAST")
+      const res = await fetch(src)
+      if (!res.ok) return null
+      const blob = await res.blob()
+      return await new Promise((resolve) => {
+        const reader = new FileReader()
+        reader.onloadend = () => resolve(typeof reader.result === "string" ? reader.result : null)
+        reader.readAsDataURL(blob)
+      })
     } catch {
-      text("(Signature on file)", margin + 4, y + 16, { size: 9, color: "#64748b" })
+      return null
     }
-
-    y += sigMaxH + 6
-
-    // Signature line + name
-    line(margin + 4, y, margin + 100, y, "#1e293b")
-    y += 5
-    text(contractorName, margin + 4, y, { size: 8, color: "#64748b" })
-    y += 4
-    text(`Signed electronically on ${effectiveDate}`, margin + 4, y, { size: 7, color: "#94a3b8" })
-    y += 10
+  }
+  const createCompanySignatureDataUrl = (): string => {
+    const canvas = document.createElement("canvas")
+    canvas.width = 520
+    canvas.height = 120
+    const ctx = canvas.getContext("2d")
+    if (!ctx) return ""
+    ctx.fillStyle = "#0f172a"
+    ctx.font = "italic 56px Georgia"
+    ctx.fillText("Ron Rice", 10, 72)
+    return canvas.toDataURL("image/png")
   }
 
-  // ── Footer ──
-  checkPageBreak(18)
+  // Try to load white logo for cover
+  let logoDataUrl: string | null = null
+  try {
+    const logoRes = await fetch("/images/stance-logo-white.png")
+    if (logoRes.ok) {
+      const logoBlb = await logoRes.blob()
+      logoDataUrl = await new Promise<string | null>((resolve) => {
+        const rdr = new FileReader()
+        rdr.onloadend = () => resolve(typeof rdr.result === "string" ? rdr.result : null)
+        rdr.readAsDataURL(logoBlb)
+      })
+    }
+  } catch { /* proceed without logo */ }
+
+  // ── Cover Page ────────────────────────────────────────────────────────────
+  const coverH = 46
+  doc.setFillColor("#0f172a")
+  doc.rect(0, 0, pageW, coverH, "F")
+  doc.setFillColor(RED)
+  doc.rect(0, coverH, pageW, 1.5, "F")
+  if (logoDataUrl) {
+    try { doc.addImage(logoDataUrl, "PNG", margin, coverH / 2 - 6, 52, 13, "", "FAST") }
+    catch { text("STANCE MARKETING LLC", margin, coverH / 2 + 3, { size: 13, bold: true, color: "#ffffff" }) }
+  } else {
+    text("STANCE MARKETING LLC", margin, coverH / 2 + 3, { size: 13, bold: true, color: "#ffffff" })
+  }
+  text("EXECUTED CONTRACT PACKET", pageW - margin, coverH / 2 - 4, { align: "right", size: 7.5, bold: true, color: RED })
+  text("Independent Contractor Agreement", pageW - margin, coverH / 2 + 4, { align: "right", size: 8, color: "#cbd5e1" })
+
+  y = coverH + 14
+  text("INDEPENDENT CONTRACTOR AGREEMENT", margin, y, { size: 18, bold: true, color: "#0f172a" })
+  y += 5
+  doc.setFillColor(RED)
+  doc.rect(margin, y, 28, 1.5, "F")
+  y += 9
+
+  doc.setFont("helvetica", "bold"); doc.setFontSize(7.5); doc.setTextColor("#94a3b8")
+  doc.text("PROGRAM", margin, y)
+  doc.setFont("helvetica", "normal"); doc.setTextColor("#334155")
+  doc.text(programLabel, margin + 22, y)
+  y += 5.5
+  doc.setFont("helvetica", "bold"); doc.setFontSize(7.5); doc.setTextColor("#94a3b8")
+  doc.text("EFFECTIVE DATE", margin, y)
+  doc.setFont("helvetica", "normal"); doc.setTextColor("#334155")
+  doc.text(effectiveDate, margin + 35, y)
+  doc.setFont("helvetica", "normal"); doc.setTextColor("#0f172a")
+  y += 11
+
+  // Two-column party panel
+  const panelH = 42
+  const panelColW = (contentW - 5) / 2
+  // Company (dark)
+  doc.setFillColor("#0f172a")
+  doc.rect(margin, y, panelColW, panelH, "F")
+  doc.setFont("helvetica", "bold"); doc.setFontSize(6.5); doc.setTextColor("#64748b")
+  doc.text("COMPANY", margin + 5, y + 8)
+  doc.setFont("helvetica", "bold"); doc.setFontSize(9); doc.setTextColor("#ffffff")
+  doc.text("Stance Marketing LLC", margin + 5, y + 16)
+  doc.setFont("helvetica", "normal"); doc.setFontSize(7); doc.setTextColor("#94a3b8")
+  ;(doc.splitTextToSize(companyAddress, panelColW - 10) as string[]).forEach((ln, i) =>
+    doc.text(ln, margin + 5, y + 23 + i * 4.5)
+  )
+  // Contractor (light + red accent)
+  const panelRX = margin + panelColW + 5
+  doc.setFillColor("#f1f5f9")
+  doc.rect(panelRX, y, panelColW, panelH, "F")
+  doc.setFillColor(RED)
+  doc.rect(panelRX, y, 3, panelH, "F")
+  doc.setFont("helvetica", "bold"); doc.setFontSize(6.5); doc.setTextColor("#64748b")
+  doc.text("CONTRACTOR", panelRX + 7, y + 8)
+  doc.setFont("helvetica", "bold"); doc.setFontSize(9); doc.setTextColor("#0f172a")
+  doc.text(contractorName, panelRX + 7, y + 16)
+  doc.setFont("helvetica", "normal"); doc.setFontSize(7); doc.setTextColor("#475569")
+  let cLineY = y + 23
+  if (data.email) { doc.text(data.email, panelRX + 7, cLineY); cLineY += 4.5 }
+  if (data.phone) { doc.text(data.phone, panelRX + 7, cLineY); cLineY += 4.5 }
+  if (data.address) {
+    const aStr = [data.address, data.city, data.state, data.zipCode].filter(Boolean).join(", ")
+    ;(doc.splitTextToSize(aStr, panelColW - 14) as string[]).slice(0, 2).forEach((ln, i) =>
+      doc.text(ln, panelRX + 7, cLineY + i * 4)
+    )
+  }
+  doc.setFont("helvetica", "normal"); doc.setTextColor("#0f172a")
+  y += panelH + 12
+
+  sectionHeader("CONTRACT TERMS (FULL TEXT)")
+  paragraph("This executed packet includes the full Independent Contractor Agreement accepted electronically by the contractor.", 8.5, "#64748b")
+  y += 2
+  for (const section of CONTRACT_SECTIONS) {
+    checkPageBreak(14)
+    text(`${section.num}. ${section.title}`, margin, y, { size: 9.5, bold: true, color: "#1e293b" })
+    y += 5
+    for (const clause of section.clauses) {
+      paragraph(clause, 8.2, "#334155")
+      y += 1.2
+    }
+    y += 2
+  }
+
+  // Force a fresh page for signatures so the block is never split
+  addPage()
+  sectionHeader("EXECUTION & SIGNATURES")
+
+  // Two-column bordered signature boxes
+  const sigColW = (contentW - 8) / 2
+  const sigBoxH = 52
+  const leftX = margin
+  const rightX = margin + sigColW + 8
+
+  // Company signature box
+  doc.setFillColor("#f8fafc")
+  doc.setDrawColor("#e2e8f0")
+  doc.rect(leftX, y, sigColW, sigBoxH, "FD")
+  doc.setFillColor("#0f172a")
+  doc.rect(leftX, y, sigColW, 9, "F")
+  text("COMPANY SIGNATURE", leftX + 5, y + 6.5, { size: 7.5, bold: true, color: "#ffffff" })
+  const companySignature = createCompanySignatureDataUrl()
+  if (companySignature) {
+    try { doc.addImage(companySignature, "PNG", leftX + 4, y + 14, 50, 13, "", "FAST") }
+    catch { text("Ron Rice", leftX + 4, y + 22, { size: 11, bold: true }) }
+  }
+  doc.setDrawColor("#cbd5e1")
+  doc.line(leftX + 4, y + 30, leftX + sigColW - 4, y + 30)
+  text("Ron Rice, President", leftX + 5, y + 36, { size: 8.5, bold: true })
+  text("Stance Marketing LLC", leftX + 5, y + 41.5, { size: 7.5, color: "#64748b" })
+  text(effectiveDate, leftX + 5, y + 47, { size: 7.5, color: "#64748b" })
+
+  // Contractor signature box
+  doc.setFillColor("#f8fafc")
+  doc.setDrawColor("#e2e8f0")
+  doc.rect(rightX, y, sigColW, sigBoxH, "FD")
+  doc.setFillColor(RED)
+  doc.rect(rightX, y, sigColW, 9, "F")
+  text("CONTRACTOR SIGNATURE", rightX + 5, y + 6.5, { size: 7.5, bold: true, color: "#ffffff" })
+  if (data.signatureDataUrl) {
+    try { doc.addImage(data.signatureDataUrl, "PNG", rightX + 4, y + 14, 50, 13, "", "FAST") }
+    catch { text("(Signature on file)", rightX + 4, y + 22, { size: 8, color: "#64748b" }) }
+  }
+  doc.setDrawColor("#cbd5e1")
+  doc.line(rightX + 4, y + 30, rightX + sigColW - 4, y + 30)
+  text(contractorName, rightX + 5, y + 36, { size: 8.5, bold: true })
+  text(data.isAcknowledged ? "Electronically Acknowledged ✓" : "Pending", rightX + 5, y + 41.5, { size: 7.5, color: "#64748b" })
+  text(effectiveDate, rightX + 5, y + 47, { size: 7.5, color: "#64748b" })
+
+  y += sigBoxH + 8
   line(margin, y, pageW - margin, y)
   y += 6
-  const footerLines = [
-    `This document confirms the onboarding of ${contractorName} with Stance Marketing LLC, effective ${effectiveDate}.`,
-    `A signed copy of the Independent Contractor Agreement was sent to ${data.email}.`,
-    "For questions, contact your Stance Marketing manager.",
-  ]
-  for (const fl of footerLines) {
-    const wrapped = doc.splitTextToSize(fl, contentW)
-    for (const wl of wrapped) {
-      checkPageBreak(5)
-      text(wl, margin, y, { size: 8, color: "#94a3b8" })
-      y += 4.5
+
+  addPage()
+  sectionHeader("W-9 TAX CERTIFICATION")
+  row("Name on tax return", contractorName)
+  row("Taxpayer ID Type", data.tinType === "ssn" ? "SSN" : data.tinType === "ein" ? "EIN" : "N/A")
+  row("Taxpayer ID", tinFormatted)
+  row("W-9 Certified", data.w9Certified ? "Yes" : "No")
+  row("Exempt Payee Code", data.exemptPayeeCode || "N/A")
+  if (data.w9SignatureDataUrl) {
+    checkPageBreak(28)
+    text("W-9 Signature", margin, y, { size: 8.5, bold: true, color: "#475569" })
+    y += 3
+    try {
+      doc.addImage(data.w9SignatureDataUrl, "PNG", margin, y, 55, 14, "", "FAST")
+    } catch {
+      text("(W-9 signature on file)", margin, y + 6, { size: 8, color: "#64748b" })
     }
+    y += 16
+  }
+  row("W-9 Signature Date", new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }))
+
+  addPage()
+  sectionHeader("UPLOADED DOCUMENTS")
+  row("Government ID File", data.idDocName || "Not uploaded")
+  row("Badge Photo File", data.badgePhotoName || "Not uploaded")
+  y += 3
+
+  const addRemoteImagePanel = async (title: string, url: string | undefined, maxW = 110, maxH = 80) => {
+    checkPageBreak(maxH + 20)
+    text(title, margin, y, { size: 9, bold: true, color: "#334155" })
+    y += 4
+    if (!url) {
+      text("Not uploaded", margin, y + 2, { size: 8.5, color: "#94a3b8" })
+      y += 8
+      return
+    }
+    const dataUrl = await loadImageAsDataUrl(url)
+    if (!dataUrl) {
+      text("Uploaded file available by URL:", margin, y + 2, { size: 8, color: "#94a3b8" })
+      y += 5
+      paragraph(url, 7.5, "#2563eb")
+      y += 2
+      return
+    }
+
+    // Determine natural dimensions to preserve aspect ratio
+    let dispW = maxW
+    let dispH = maxH
+    try {
+      const imgEl = new window.Image()
+      await new Promise<void>((res) => {
+        imgEl.onload = () => {
+          const ratio = imgEl.naturalWidth / imgEl.naturalHeight
+          if (ratio > 1) {
+            dispW = maxW
+            dispH = maxW / ratio
+          } else {
+            dispH = maxH
+            dispW = maxH * ratio
+          }
+          res()
+        }
+        imgEl.onerror = () => res()
+        imgEl.src = dataUrl
+      })
+    } catch { /* use defaults */ }
+
+    const fmt = dataUrl.startsWith("data:image/png") ? "PNG" : "JPEG"
+    try {
+      doc.addImage(dataUrl, fmt, margin, y, dispW, dispH, "", "FAST")
+    } catch {
+      text("File included (preview unavailable), URL:", margin, y + 2, { size: 8, color: "#94a3b8" })
+      y += 5
+      paragraph(url, 7.5, "#2563eb")
+      y += 2
+      return
+    }
+    y += dispH + 5
   }
 
-  // ── Page numbers ──
+  await addRemoteImagePanel("Government ID", data.idDocUrl)
+  await addRemoteImagePanel("Badge Photo", data.badgePhotoUrl)
+
+  checkPageBreak(14)
+  line(margin, y, pageW - margin, y)
+  y += 6
+  paragraph(
+    `This packet contains the executed Independent Contractor Agreement, W-9 certification, electronic signatures, and uploaded onboarding documents for ${contractorName}.`,
+    8,
+    "#64748b",
+  )
+
+  // ── Footer on every page ──
   const totalPages = doc.getNumberOfPages()
   for (let i = 1; i <= totalPages; i++) {
     doc.setPage(i)
-    text(`Page ${i} of ${totalPages}`, pageW - margin, pageH - 8, {
-      align: "right",
-      size: 7,
-      color: "#94a3b8",
-    })
+    doc.setDrawColor(RED)
+    doc.line(margin, pageH - 12, pageW - margin, pageH - 12)
+    doc.setFont("helvetica", "normal")
+    doc.setFontSize(6.5)
+    doc.setTextColor("#94a3b8")
+    doc.text("CONFIDENTIAL — Stance Marketing LLC", margin, pageH - 8)
+    doc.text(`Page ${i} of ${totalPages}`, pageW - margin, pageH - 8, { align: "right" })
+    doc.setTextColor("#0f172a")
+    doc.setFont("helvetica", "normal")
   }
 
   return doc
@@ -1403,11 +1961,10 @@ async function uploadOnboardingPDF(
     `Stance-Onboarding-${contractorName.replace(/\s+/g, "-")}.pdf`,
     { type: "application/pdf" },
   )
-  const formData = new FormData()
-  formData.append("file", file)
-  formData.append("category", "contracts")
-  const res = await fetch("/api/upload", { method: "POST", body: formData })
-  if (!res.ok) throw new Error("PDF upload failed")
-  const json = await res.json() as { url: string }
-  return json.url
+  const blob = await upload(`contracts/${file.name}`, file, {
+    access: "public",
+    handleUploadUrl: "/api/upload",
+    multipart: file.size > 5 * 1024 * 1024,
+  })
+  return blob.url
 }

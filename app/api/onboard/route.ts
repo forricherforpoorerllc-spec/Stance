@@ -20,6 +20,7 @@ export async function POST(req: Request) {
       token,
       partnerType,
       legalName,
+      dob,
       dbaName,
       entityType,
       address,
@@ -30,6 +31,7 @@ export async function POST(req: Request) {
       taxId,
       tinType,
       w9Certified,
+      w9SignatureDataUrl,
       exemptPayeeCode,
       signatureDataUrl,
       idDocUrl,
@@ -41,10 +43,19 @@ export async function POST(req: Request) {
       programLabel: clientProgramLabel,
     } = body
     const resolvedTaxId = taxId || body.einLast4 || ""
+    const tokenSafe = token || `manual-${Date.now()}`
 
-    if (!token || !legalName || !signatureDataUrl || !isContractRead) {
+    const missingFields: string[] = []
+    if (!legalName?.trim()) missingFields.push("legalName")
+    if (!signatureDataUrl?.trim()) missingFields.push("signatureDataUrl")
+    if (!isContractRead) missingFields.push("isContractRead")
+
+    if (missingFields.length > 0) {
       return NextResponse.json(
-        { error: "Missing required onboarding fields" },
+        {
+          error: "Missing required onboarding fields",
+          missingFields,
+        },
         { status: 400 }
       )
     }
@@ -87,14 +98,10 @@ export async function POST(req: Request) {
               ? resolvedTaxId.replace(/^(\d{3})(\d{2})(\d{4})$/, "$1-$2-$3")
               : resolvedTaxId.replace(/^(\d{2})(\d{7})$/, "$1-$2")
             : "",
-          w9Certified: w9Certified ? "Yes" : "No",
-          exemptPayeeCode: exemptPayeeCode || "",
-          contractSigned: isContractRead ? "Yes" : "No",
-          acknowledged: isAcknowledged ? "Yes" : "No",
           idDocUrl: idDocUrl || "",
           badgePhotoUrl: badgePhotoUrl || "",
           onboardingPdfUrl: onboardingPdfUrl || "",
-          token: token || "",
+          token: tokenSafe,
         }),
       })
     } catch (sheetErr) {
@@ -154,7 +161,7 @@ export async function POST(req: Request) {
                 <img src="${signatureDataUrl}" alt="Signature" style="max-width:300px;height:auto;background:#fff;padding:8px" />
               </div>
               <div style="margin-top:12px;padding:12px;background:#0d1117;border:1px solid #1f2937">
-                <p style="color:#4b5563;font-size:12px;margin:0">Token: ${token}</p>
+                <p style="color:#4b5563;font-size:12px;margin:0">Token: ${tokenSafe}</p>
               </div>
               <p style="color:#4b5563;font-size:11px;margin-top:20px">Submitted via stance-marketing.com/onboarding</p>
             </div>
@@ -209,7 +216,7 @@ export async function POST(req: Request) {
                     <p style="color:#9ca3af;font-size:14px;line-height:1.6;margin:0">Our team will review your documents and finalize your account setup within 1–2 business days.</p>
                   </div>
                   <div style="margin-top:24px;padding:16px;background:#111827;border:1px solid #1f2937;border-left:3px solid #ef4444">
-                    <p style="color:#9ca3af;font-size:13px;margin:0">Questions? Contact us at <a href="mailto:partnerships@stancellc.com" style="color:#60a5fa">partnerships@stancellc.com</a></p>
+                    <p style="color:#9ca3af;font-size:13px;margin:0">Questions? Contact us at <a href="mailto:info@stance-marketing.com" style="color:#60a5fa">info@stance-marketing.com</a></p>
                   </div>
                   <p style="color:#4b5563;font-size:11px;margin-top:20px">Stance Marketing LLC</p>
                 </div>

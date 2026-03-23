@@ -29,7 +29,7 @@ export default function Home() {
     },
     image: "https://stance-marketing.com/images/partnership-hero.png",
     description:
-      "Leading internet provider partnership programs connecting sales agents, businesses, and referral partners with top telecom brands including AT&T, Spectrum, Frontier, T-Mobile, Brightspeed, Kinetic, Optimum, Earthlink, and Altafiber.",
+      "Stance is a managed sales organization and authorized channel partner for leading internet service providers. We deploy field sales teams, event campaigns, referral networks, and business channel programs that drive verified residential and commercial subscriber activations across the United States.",
     foundingDate: "2020",
     numberOfEmployees: {
       "@type": "QuantitativeValue",
@@ -41,21 +41,21 @@ export default function Home() {
       name: "United States",
     },
     knowsAbout: [
-      "Internet Service Provider Partnerships",
-      "Telecom Sales Channel Management",
-      "Fiber Internet Sales",
-      "Door-to-Door Sales Training",
-      "Referral Marketing Programs",
-      "Commission-Based Sales Programs",
-      "AT&T Authorized Dealer Program",
-      "Spectrum Authorized Retailer",
-      "T-Mobile Fiber D2D",
-      "Verizon Fios Partner Program",
+      "ISP Channel Development",
+      "Managed Sales Organization",
+      "Field Marketing Organization",
+      "Telecom Subscriber Acquisition",
+      "Door-to-Door Sales Management",
+      "Event & Retail Sales Campaigns",
+      "Referral Partner Networks",
+      "ISP Business Channel Programs",
+      "Telecom Sales Compliance",
+      "Multi-Channel Sales Deployment",
     ],
     contactPoint: [
       {
         "@type": "ContactPoint",
-        email: "partnerships@stancellc.com",
+        email: "info@stance-marketing.com",
         contactType: "Partnership Inquiries",
         areaServed: "US",
         availableLanguage: ["English"],
@@ -156,50 +156,50 @@ export default function Home() {
     mainEntity: [
       {
         "@type": "Question",
-        name: "What industries does Stance Marketing specialize in?",
+        name: "What types of internet providers does Stance work with?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "Stance Marketing specializes in providing marketing solutions for Cable, Internet, Lifeline, and Energy sectors. Our expertise in these industries allows us to create targeted strategies that deliver exceptional results for our clients.",
+          text: "We work with residential and business internet service providers looking to grow subscriber volume through managed sales channels. Our current relationships span fiber, cable, and fixed wireless providers operating across the United States.",
         },
       },
       {
         "@type": "Question",
-        name: "How does Stance Marketing approach new client partnerships?",
+        name: "What sales channels does Stance deploy?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "We begin with a comprehensive consultation to understand your business goals, target audience, and current marketing challenges. From there, we develop a customized strategy tailored to your specific needs, with clear metrics for success and regular reporting on progress.",
+          text: "We operate across door-to-door field sales, event and retail location campaigns, structured referral networks, and business-to-business channel programs. Channels can be deployed independently or in combination depending on the market and provider goals.",
         },
       },
       {
         "@type": "Question",
-        name: "What marketing services does Stance offer?",
+        name: "How does Stance ensure compliance and activation quality?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "Stance offers a full range of marketing services including digital marketing, brand development, content creation, social media management, SEO optimization, PPC campaigns, email marketing, and traditional marketing strategies tailored to your industry needs.",
+          text: "All sales activity operates under authorized agreements with each provider. We enforce compliance standards at the team level, and our programs are structured around verified, completed installations — not raw lead volume.",
         },
       },
       {
         "@type": "Question",
-        name: "How does Stance measure marketing success?",
+        name: "Are there opportunities for independent sales professionals?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "We establish clear KPIs at the beginning of each campaign based on your business objectives. Our data-driven approach includes regular reporting on metrics such as conversion rates, customer acquisition costs, ROI, engagement metrics, and other relevant performance indicators.",
+          text: "Yes — we offer structured programs for field sales agents, event team representatives, referral partners, and channel businesses. Each program has its own requirements and compensation structure. Visit our program pages to learn more or submit an application.",
         },
       },
       {
         "@type": "Question",
-        name: "What makes Stance different from other marketing agencies?",
+        name: "How do I explore a partnership with Stance?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "Stance combines deep industry expertise in specific sectors with innovative marketing approaches. Our dedicated team provides personalized service, transparent communication, and measurable results. We focus on building long-term partnerships rather than just completing transactions.",
+          text: "For providers interested in deploying our sales channels, reach out through our contact form and a member of our team will follow up to discuss fit and program options. For sales professionals and businesses, browse our program pages to find the right opportunity.",
         },
       },
       {
         "@type": "Question",
-        name: "How quickly can I expect to see results from working with Stance?",
+        name: "What markets does Stance currently operate in?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "While some tactical initiatives may show immediate results, strategic marketing typically requires time to build momentum. Most clients begin seeing measurable improvements within 3-6 months, with significant results becoming apparent after 6-12 months of consistent implementation.",
+          text: "We have active programs across major US markets and continue to expand. Market availability varies by program and provider. Contact us to discuss coverage in a specific territory.",
         },
       },
     ],

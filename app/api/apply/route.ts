@@ -1,16 +1,61 @@
 import { NextResponse } from "next/server"
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY || ""
-const GOOGLE_SCRIPT_URL = process.env.GOOGLE_SCRIPT_URL || ""
+const GOOGLE_APPLY_SCRIPT_URL = process.env.GOOGLE_APPLY_SCRIPT_URL || process.env.GOOGLE_SCRIPT_URL || ""
 const TO_EMAIL = process.env.ADMIN_EMAIL || "gamblerspassion@gmail.com"
 
 const PROGRAM_LABELS: Record<string, string> = {
   referral: "Referral Partner",
   "sales-agent": "Sales Agent",
-  business: "Business Partnership",
+  business: "Business (IBO)",
   "spectrum-event": "Spectrum Event Team",
   "tmobile-d2d": "T-Mobile Fiber D2D",
   "verizon-d2d": "Verizon Fios D2D",
+}
+
+const PROGRAM_FIELD_KEYS = [
+  "referralMethod",
+  "industry",
+  "salesExperience",
+  "preferredChannel",
+  "territoryPreference",
+  "businessType",
+  "customerBase",
+  "eventExperience",
+  "previousCarriers",
+  "hasTransportation",
+  "d2dExperience",
+  "teamSize",
+  "territoryInterest",
+  "additionalNotes",
+] as const
+
+function normalizeProgramFields(input: Record<string, unknown>) {
+  const normalized: Record<(typeof PROGRAM_FIELD_KEYS)[number], string> = {
+    referralMethod: "",
+    industry: "",
+    salesExperience: "",
+    preferredChannel: "",
+    territoryPreference: "",
+    businessType: "",
+    customerBase: "",
+    eventExperience: "",
+    previousCarriers: "",
+    hasTransportation: "",
+    d2dExperience: "",
+    teamSize: "",
+    territoryInterest: "",
+    additionalNotes: "",
+  }
+
+  for (const key of PROGRAM_FIELD_KEYS) {
+    const value = input[key]
+    if (typeof value === "string") {
+      normalized[key] = value.trim()
+    }
+  }
+
+  return normalized
 }
 
 export async function POST(req: Request) {
@@ -34,6 +79,13 @@ export async function POST(req: Request) {
       )
     }
 
+    if (!(partnerType in PROGRAM_LABELS)) {
+      return NextResponse.json(
+        { error: "Invalid program selection" },
+        { status: 400 }
+      )
+    }
+
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(email)) {
       return NextResponse.json(
@@ -44,35 +96,71 @@ export async function POST(req: Request) {
 
     const name = `${firstName} ${lastName}`.trim()
     const programLabel = PROGRAM_LABELS[partnerType] || partnerType
+    const normalizedProgramFields = normalizeProgramFields(programFields)
 
     // Build program-specific field summary
-    const programFieldSummary = Object.entries(programFields)
+    const programFieldSummary = Object.entries(normalizedProgramFields)
       .filter(([, v]) => v)
       .map(([k, v]) => `${k}: ${v}`)
       .join(" | ")
 
     // 1. Submit to Google Sheet
+    if (!GOOGLE_APPLY_SCRIPT_URL) {
+      return NextResponse.json(
+        { error: "Google Apply Script URL is not configured" },
+        { status: 500 }
+      )
+    }
+
+    const sheetRes = await fetch(GOOGLE_APPLY_SCRIPT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        formType: "application",
+        name,
+        email,
+        phone: phone || "",
+        state: state || "",
+        company: company || "",
+        program: programLabel,
+        ...normalizedProgramFields,
+        // Fallback summary in case script columns are changed later.
+        details: programFieldSummary,
+      }),
+    })
+
+    if (!sheetRes.ok) {
+      const sheetText = await sheetRes.text()
+      console.error("Google Sheet HTTP error:", sheetRes.status, sheetText)
+      return NextResponse.json(
+        { error: "Unable to write application to Google Sheet" },
+        { status: 502 }
+      )
+    }
+
+    const sheetBody = await sheetRes.text()
+    let parsed: { success?: boolean; error?: string } | null = null
+
     try {
-      await fetch(GOOGLE_SCRIPT_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          formType: "application",
-          name,
-          email,
-          phone: phone || "",
-          state: state || "",
-          company: company || "",
-          program: programLabel,
-          details: programFieldSummary,
-        }),
-      })
-    } catch (sheetErr) {
-      console.error("Google Sheet error:", sheetErr)
+      parsed = JSON.parse(sheetBody) as { success?: boolean; error?: string }
+    } catch {
+      console.error("Google Sheet non-JSON response:", sheetBody)
+      return NextResponse.json(
+        { error: "Google Sheet script returned an invalid response" },
+        { status: 502 }
+      )
+    }
+
+    if (parsed?.success !== true) {
+      console.error("Google Sheet script error:", parsed?.error || parsed)
+      return NextResponse.json(
+        { error: "Google Sheet script returned an error" },
+        { status: 502 }
+      )
     }
 
     // 2. Build email rows for program-specific fields
-    const programRows = Object.entries(programFields)
+    const programRows = Object.entries(normalizedProgramFields)
       .filter(([, v]) => v)
       .map(
         ([key, value]) => `
@@ -163,7 +251,7 @@ export async function POST(req: Request) {
                 </p>
                 <div style="margin-top:24px;padding:16px;background:#111827;border:1px solid #1f2937;border-left:3px solid #ef4444">
                   <p style="color:#9ca3af;font-size:13px;margin:0">
-                    Questions? Contact us at <a href="mailto:partnerships@stancellc.com" style="color:#60a5fa">partnerships@stancellc.com</a>
+                    Questions? Contact us at <a href="mailto:info@stance-marketing.com" style="color:#60a5fa">info@stance-marketing.com</a>
                   </p>
                 </div>
                 <p style="color:#4b5563;font-size:11px;margin-top:20px">Stance Marketing LLC</p>

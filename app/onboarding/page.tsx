@@ -77,6 +77,8 @@ export default async function OnboardingPage({ searchParams }: PageProps) {
                 firstName: payload.name.split(" ")[0] || "",
                 lastName: payload.name.split(" ").slice(1).join(" ") || "",
                 email: payload.email,
+                phone: payload.phone || "",
+                legalName: payload.name || "",
                 partnerType: payload.partnerType,
               }
             : {}

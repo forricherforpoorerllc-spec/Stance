@@ -182,8 +182,8 @@ export function PartnerSignupContent() {
               </p>
               <p className="text-gray-500 text-sm mb-8">
                 Questions? Email us at{" "}
-                <a href="mailto:partnerships@stancellc.com" className="text-red-400 hover:underline">
-                  partnerships@stancellc.com
+                <a href="mailto:info@stance-marketing.com" className="text-red-400 hover:underline">
+                  info@stance-marketing.com
                 </a>
               </p>
               <div className="flex gap-3 justify-center">

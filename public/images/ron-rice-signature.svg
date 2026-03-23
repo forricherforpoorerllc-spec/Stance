@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="420" height="110" viewBox="0 0 420 110" fill="none">
+  <rect width="420" height="110" fill="white" />
+  <path d="M18 73C33 56 45 50 55 53C67 57 61 74 49 80C44 83 39 85 33 86" stroke="#111827" stroke-width="2.3" stroke-linecap="round"/>
+  <path d="M72 82C78 62 90 50 104 52C117 54 116 72 107 83" stroke="#111827" stroke-width="2.3" stroke-linecap="round"/>
+  <path d="M110 83C119 68 128 60 140 61C152 62 156 74 148 84" stroke="#111827" stroke-width="2.3" stroke-linecap="round"/>
+  <path d="M166 84C170 72 176 62 185 60C193 59 198 64 199 72C200 80 197 86 191 89" stroke="#111827" stroke-width="2.3" stroke-linecap="round"/>
+  <path d="M207 84C215 66 226 57 239 58C250 59 252 70 246 81" stroke="#111827" stroke-width="2.3" stroke-linecap="round"/>
+  <path d="M258 86C270 70 283 61 297 62C310 63 311 77 303 87" stroke="#111827" stroke-width="2.3" stroke-linecap="round"/>
+  <path d="M312 88C322 75 335 65 349 66C361 67 366 79 357 90" stroke="#111827" stroke-width="2.3" stroke-linecap="round"/>
+  <path d="M15 96H405" stroke="#9CA3AF" stroke-width="1.4"/>
+  <text x="16" y="22" font-family="Georgia, Times New Roman, serif" font-style="italic" font-size="14" fill="#374151">Ron Rice</text>
+  <text x="16" y="40" font-family="Arial, sans-serif" font-size="10" fill="#6B7280">President, Stance Marketing LLC</text>
+</svg>

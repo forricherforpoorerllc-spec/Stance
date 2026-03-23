@@ -7,33 +7,33 @@ import { TrendingUp, Target, Users, BarChart, PieChart, LineChart } from "lucide
 const salesSolutions = [
   {
     icon: <TrendingUp className="h-10 w-10 text-red-500 mb-4" />,
-    title: "Performance Marketing",
-    description: "Data-driven campaigns that deliver measurable results and maximize ROI.",
+    title: "Verified Activation Model",
+    description: "Our operations are built around completed, verified installations — not just leads. Performance is always traceable.",
   },
   {
     icon: <Target className="h-10 w-10 text-red-500 mb-4" />,
-    title: "Targeted Acquisition",
-    description: "Precision targeting strategies to reach your ideal customers efficiently.",
+    title: "Managed Sales Teams",
+    description: "We recruit, train, and manage the sales teams. Providers get results without taking on the hiring and HR overhead.",
   },
   {
     icon: <Users className="h-10 w-10 text-red-500 mb-4" />,
-    title: "Customer Retention",
-    description: "Proven approaches to increase loyalty and reduce customer churn.",
+    title: "Multi-Market Coverage",
+    description: "Active programs across major US markets with the operational capacity to expand into new territories.",
   },
   {
     icon: <BarChart className="h-10 w-10 text-red-500 mb-4" />,
-    title: "Analytics & Insights",
-    description: "Advanced analytics to uncover opportunities and optimize campaigns.",
+    title: "Carrier Compliance",
+    description: "All activity adheres to provider compliance standards. We protect your brand at every point of customer contact.",
   },
   {
     icon: <PieChart className="h-10 w-10 text-red-500 mb-4" />,
-    title: "Market Segmentation",
-    description: "Strategic audience segmentation for personalized marketing approaches.",
+    title: "Rapid Mobilization",
+    description: "We can launch new campaigns quickly with minimal ramp time — from onboarding to active sales in the field.",
   },
   {
     icon: <LineChart className="h-10 w-10 text-red-500 mb-4" />,
-    title: "Growth Strategies",
-    description: "Comprehensive plans to scale your business and expand market share.",
+    title: "Scalable Capacity",
+    description: "From targeted regional tests to full national rollouts, our program structure scales to match provider volume goals.",
   },
 ]
 
@@ -51,11 +51,11 @@ export function PartnersSection() {
           className="text-center mb-16"
         >
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-3 md:mb-4">
-            Sales <span className="text-red-500">Solutions</span>
+            How We Drive <span className="text-red-500">Results</span>
           </h2>
           <div className="w-16 md:w-20 h-1 bg-red-500 mx-auto mb-4 md:mb-6"></div>
           <p className="text-gray-400 max-w-2xl mx-auto px-4 sm:px-0">
-            We deliver comprehensive sales strategies tailored to your industry needs and business goals.
+            Our operations are structured to deliver consistent, quality-driven performance across every sales channel we deploy.
           </p>
         </motion.div>
 
@@ -85,8 +85,7 @@ export function PartnersSection() {
         >
           <div className="inline-block bg-gray-900 px-8 py-6 border-l-2 border-red-500">
             <p className="text-lg text-gray-300 italic">
-              "Our tailored sales solutions have helped businesses across multiple industries achieve an average of
-              <span className="text-red-500 font-bold"> 32% increase</span> in conversion rates."
+              "Our structured, multi-channel approach has consistently delivered strong activation volumes for our provider partners across residential and business markets — through any sales model they need."
             </p>
           </div>
         </motion.div>

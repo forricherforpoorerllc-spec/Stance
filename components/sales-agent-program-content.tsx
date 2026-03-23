@@ -441,10 +441,10 @@ export function SalesAgentProgramContent() {
             <p className="text-emerald-200 mb-10">
               Questions? Email us at{" "}
               <a
-                href="mailto:careers@stancellc.com"
+                href="mailto:info@stance-marketing.com"
                 className="text-white underline font-semibold hover:text-emerald-100"
               >
-                careers@stancellc.com
+                info@stance-marketing.com
               </a>
             </p>
             <Link href="/become-a-partner">

@@ -15,8 +15,7 @@ export function Footer() {
               className="h-5 sm:h-6 w-auto mb-4 md:mb-6"
             />
             <p className="text-gray-400 mb-6 text-sm md:text-base">
-              Redefining digital marketing with innovative solutions for major brands in Cable, Internet, Lifeline, and
-              Energy sectors.
+              A managed sales organization deploying field teams, referral networks, and channel programs that drive subscriber growth for internet service providers.
             </p>
           </div>
 
@@ -28,7 +27,7 @@ export function Footer() {
                 { name: "About", href: "/#about" },
                 { name: "Services", href: "/#services" },
                 { name: "Partners", href: "/partners" },
-                { name: "Become a Partner", href: "/become-a-partner" },
+                { name: "Join a Program", href: "/become-a-partner" },
                 { name: "Contact", href: "/#contact" },
               ].map((item) => (
                 <li key={item.name}>
@@ -44,7 +43,7 @@ export function Footer() {
           </div>
 
           <div className="mt-2 sm:mt-0">
-            <h4 className="text-white font-bold mb-4 md:mb-6 text-base md:text-lg">Partner Programs</h4>
+            <h4 className="text-white font-bold mb-4 md:mb-6 text-base md:text-lg">Sales Programs</h4>
             <ul className="space-y-2 md:space-y-3">
               {[
                 { name: "Referral Program", href: "/referral-program" },

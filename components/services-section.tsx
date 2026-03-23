@@ -7,23 +7,23 @@ import { Wifi, Zap, Phone, Globe } from "lucide-react"
 const services = [
   {
     icon: <Wifi className="h-10 w-10 text-red-500" />,
-    title: "Internet",
-    description: "High-speed connectivity solutions for businesses and consumers with unmatched reliability.",
+    title: "Field & D2D Sales",
+    description: "Managed door-to-door residential sales campaigns with trained, performance-driven field teams.",
   },
   {
     icon: <Zap className="h-10 w-10 text-red-500" />,
-    title: "Energy",
-    description: "Innovative energy solutions that power businesses while reducing environmental impact.",
+    title: "Event & Retail Sales",
+    description: "In-person sales coverage at high-traffic retail locations and community events, driving on-the-spot activations.",
   },
   {
     icon: <Phone className="h-10 w-10 text-red-500" />,
-    title: "Lifeline",
-    description: "Essential communication services ensuring everyone stays connected when it matters most.",
+    title: "Referral Networks",
+    description: "Structured referral programs through realtors, property managers, and professional networks that generate warm introductions.",
   },
   {
     icon: <Globe className="h-10 w-10 text-red-500" />,
-    title: "Cable",
-    description: "Premium entertainment packages delivering content across multiple platforms and devices.",
+    title: "Business Channel Programs",
+    description: "B2B channel partnerships enabling established businesses to refer and sell services to their existing client base.",
   },
 ]
 
@@ -62,11 +62,11 @@ export function ServicesSection() {
           className="text-center mb-10 md:mb-16"
         >
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-3 md:mb-4">
-            Our <span className="text-red-500">Services</span>
+            Sales <span className="text-red-500">Channels</span>
           </h2>
           <div className="w-16 md:w-20 h-1 bg-red-500 mx-auto mb-4 md:mb-6"></div>
           <p className="text-gray-400 max-w-2xl mx-auto px-4 sm:px-0">
-            We partner with major brands to deliver cutting-edge solutions across multiple sectors.
+            We deploy multiple go-to-market strategies so internet service providers can grow subscriber volume through the right channel for every market.
           </p>
         </motion.div>
 

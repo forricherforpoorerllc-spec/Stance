@@ -1,0 +1,91 @@
+function doPost(e) {
+  try {
+    var data = JSON.parse(e.postData.contents);
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var formType = data.formType || "unknown";
+    var timestamp = Utilities.formatDate(new Date(), "America/New_York", "M/d/yyyy h:mm a") + " EST";
+
+    if (formType === "onboarding") {
+      appendOnboarding(ss, data, timestamp);
+    } else if (formType === "application") {
+      appendApplication(ss, data, timestamp);
+    } else if (formType === "partnerApplication") {
+      appendPartnerApplication(ss, data, timestamp);
+    } else if (formType === "contact") {
+      appendContact(ss, data, timestamp);
+    }
+
+    return ContentService
+      .createTextOutput(JSON.stringify({ success: true }))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService
+      .createTextOutput(JSON.stringify({ success: false, error: err.message }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function getOrCreateSheet(ss, name, headers) {
+  var sheet = ss.getSheetByName(name);
+  if (!sheet) {
+    sheet = ss.insertSheet(name);
+    sheet.appendRow(headers);
+    var range = sheet.getRange(1, 1, 1, headers.length);
+    range.setBackground("#1a1a2e");
+    range.setFontColor("#ffffff");
+    range.setFontWeight("bold");
+    range.setFontSize(11);
+    sheet.setFrozenRows(1);
+    for (var i = 1; i <= headers.length; i++) {
+      sheet.setColumnWidth(i, 160);
+    }
+  }
+  return sheet;
+}
+
+function appendOnboarding(ss, data, timestamp) {
+  var headers = [
+    "Timestamp", "Full Name", "DBA / Company", "Entity Type",
+    "Email", "Phone", "Address",
+    "Program", "TIN Type", "SSN/EIN (Full)",
+    "ID Document", "Badge Photo", "Onboarding PDF", "Token"
+  ];
+  var sheet = getOrCreateSheet(ss, "Onboarding", headers);
+  var address = [data.address, data.city, data.state && data.zipCode ? data.state + " " + data.zipCode : data.state || data.zipCode]
+    .filter(Boolean).join(", ");
+  sheet.appendRow([
+    timestamp, data.legalName||"" , data.dbaName||"", data.entityType||"",
+    data.email||"", data.phone||"", address,
+    data.program||"", data.tinType||"", data.tin||"",
+    data.idDocUrl||"", data.badgePhotoUrl||"", data.onboardingPdfUrl||"",
+    data.token||""
+  ]);
+}
+
+function appendApplication(ss, data, timestamp) {
+  var headers = ["Timestamp", "Name", "Email", "Phone", "State", "Company", "Program", "Details"];
+  var sheet = getOrCreateSheet(ss, "Applications", headers);
+  sheet.appendRow([
+    timestamp, data.name||"", data.email||"", data.phone||"",
+    data.state||"", data.company||"", data.program||"", data.details||""
+  ]);
+}
+
+function appendPartnerApplication(ss, data, timestamp) {
+  var headers = ["Timestamp", "Name", "Email", "Phone", "Company", "Partnership Type", "State", "Experience", "Notes"];
+  var sheet = getOrCreateSheet(ss, "Partner Applications", headers);
+  sheet.appendRow([
+    timestamp, data.name||"", data.email||"", data.phone||"",
+    data.company||"", data.partnerType||"", data.state||"",
+    data.experience||"", data.notes||""
+  ]);
+}
+
+function appendContact(ss, data, timestamp) {
+  var headers = ["Timestamp", "Name", "Email", "Phone", "Subject", "Message"];
+  var sheet = getOrCreateSheet(ss, "Contact", headers);
+  sheet.appendRow([
+    timestamp, data.name||"", data.email||"", data.phone||"",
+    data.subject||"", data.message||""
+  ]);
+}

@@ -6,34 +6,34 @@ import { ChevronDown } from "lucide-react"
 
 const faqs = [
   {
-    question: "What industries does Stance Marketing specialize in?",
+    question: "What types of internet providers does Stance work with?",
     answer:
-      "Stance Marketing specializes in providing marketing solutions for Cable, Internet, Lifeline, and Energy sectors. Our expertise in these industries allows us to create targeted strategies that deliver exceptional results for our clients.",
+      "We work with residential and business internet service providers looking to grow subscriber volume through managed sales channels. Our current relationships span fiber, cable, and fixed wireless providers operating across the United States.",
   },
   {
-    question: "How does Stance Marketing approach new client partnerships?",
+    question: "What sales channels does Stance deploy?",
     answer:
-      "We begin with a comprehensive consultation to understand your business goals, target audience, and current marketing challenges. From there, we develop a customized strategy tailored to your specific needs, with clear metrics for success and regular reporting on progress.",
+      "We operate across door-to-door field sales, event and retail location campaigns, structured referral networks, and business-to-business channel programs. Channels can be deployed independently or in combination depending on the market and provider goals.",
   },
   {
-    question: "What marketing services does Stance offer?",
+    question: "How does Stance ensure compliance and activation quality?",
     answer:
-      "Stance offers a full range of marketing services including digital marketing, brand development, content creation, social media management, SEO optimization, PPC campaigns, email marketing, and traditional marketing strategies tailored to your industry needs.",
+      "All sales activity operates under authorized agreements with each provider. We enforce compliance standards at the team level, and our programs are structured around verified, completed installations — not raw lead volume.",
   },
   {
-    question: "How does Stance measure marketing success?",
+    question: "Are there opportunities for independent sales professionals?",
     answer:
-      "We establish clear KPIs at the beginning of each campaign based on your business objectives. Our data-driven approach includes regular reporting on metrics such as conversion rates, customer acquisition costs, ROI, engagement metrics, and other relevant performance indicators.",
+      "Yes — we offer structured programs for field sales agents, event team representatives, referral partners, and channel businesses. Each program has its own requirements and compensation structure. Visit our program pages to learn more or submit an application.",
   },
   {
-    question: "What makes Stance different from other marketing agencies?",
+    question: "How do I explore a partnership with Stance?",
     answer:
-      "Stance combines deep industry expertise in specific sectors with innovative marketing approaches. Our dedicated team provides personalized service, transparent communication, and measurable results. We focus on building long-term partnerships rather than just completing transactions.",
+      "For providers interested in deploying our sales channels, reach out through our contact form and a member of our team will follow up to discuss fit and program options. For sales professionals and businesses, browse our program pages to find the right opportunity.",
   },
   {
-    question: "How quickly can I expect to see results from working with Stance?",
+    question: "What markets does Stance currently operate in?",
     answer:
-      "While some tactical initiatives may show immediate results, strategic marketing typically requires time to build momentum. Most clients begin seeing measurable improvements within 3-6 months, with significant results becoming apparent after 6-12 months of consistent implementation.",
+      "We have active programs across major US markets and continue to expand. Market availability varies by program and provider. Contact us to discuss coverage in a specific territory.",
   },
 ]
 

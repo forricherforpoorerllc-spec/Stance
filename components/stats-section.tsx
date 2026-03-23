@@ -9,25 +9,25 @@ const stats = [
     icon: <Users className="h-10 w-10 text-red-500" />,
     value: 500,
     suffix: "+",
-    label: "Satisfied Clients",
+    label: "Active Sales Partners",
   },
   {
     icon: <Award className="h-10 w-10 text-red-500" />,
     value: 15,
     suffix: "+",
-    label: "Years Experience",
+    label: "Years Combined Experience",
   },
   {
     icon: <Building className="h-10 w-10 text-red-500" />,
     value: 50,
     suffix: "+",
-    label: "Partner Brands",
+    label: "Markets Served",
   },
   {
     icon: <BarChart className="h-10 w-10 text-red-500" />,
     value: 10000,
     suffix: "+",
-    label: "Customers Reached",
+    label: "Verified Activations",
   },
 ]
 

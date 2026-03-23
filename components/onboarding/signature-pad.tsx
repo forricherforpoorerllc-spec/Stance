@@ -262,25 +262,45 @@ export function SignaturePad({
         </div>
       )}
 
-      {/* Acknowledgment */}
-      <div className="mt-8 border-2 border-slate-200 bg-slate-50 p-6 rounded-2xl">
+      {/* Acknowledgment — amber when unchecked, green when checked */}
+      <div className={`mt-8 border-2 p-6 rounded-2xl transition-all ${
+        isAcknowledged
+          ? "border-green-400 bg-green-50"
+          : "border-amber-300 bg-amber-50"
+      }`}>
         <div className="flex items-start gap-3">
           <Checkbox
             id="acknowledge"
             checked={isAcknowledged}
             onCheckedChange={(checked) => onAcknowledge(checked === true)}
-            className="mt-0.5 border-slate-400 data-[state=checked]:bg-red-500 data-[state=checked]:border-red-500 data-[state=checked]:text-white"
+            className={`mt-0.5 h-5 w-5 rounded border-2 transition-all ${
+              isAcknowledged
+                ? "border-green-500 data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500 data-[state=checked]:text-white"
+                : "border-amber-400"
+            }`}
           />
-          <Label
-            htmlFor="acknowledge"
-            className="text-base text-slate-700 leading-relaxed cursor-pointer"
-          >
-            I acknowledge that this constitutes my electronic signature and
-            express my intent to sign this Independent Contractor Agreement as
-            described in Section 15 (Electronic Records and Signatures) and
-            Section 17 (Contractor Acknowledgments). I confirm that I have read
-            and understood this Agreement in its entirety.
-          </Label>
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              {!isAcknowledged && (
+                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-200 text-amber-800">Required to continue</span>
+              )}
+              {isAcknowledged && (
+                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-green-200 text-green-800">Acknowledged ✓</span>
+              )}
+            </div>
+            <Label
+              htmlFor="acknowledge"
+              className={`text-sm leading-relaxed cursor-pointer font-medium ${
+                isAcknowledged ? "text-green-800" : "text-amber-900"
+              }`}
+            >
+              I acknowledge that this constitutes my electronic signature and
+              express my intent to sign this Independent Contractor Agreement as
+              described in Section 15 (Electronic Records and Signatures) and
+              Section 17 (Contractor Acknowledgments). I confirm that I have read
+              and understood this Agreement in its entirety.
+            </Label>
+          </div>
         </div>
       </div>
     </div>

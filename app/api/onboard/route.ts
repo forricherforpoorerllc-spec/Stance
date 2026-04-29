@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY || ""
-const GOOGLE_SCRIPT_URL = process.env.GOOGLE_SCRIPT_URL || ""
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxrE78Z0cd_qGq1KxcVyvOqxOk5LN2i87sX-HJ-dMFpd-EggkIu4ar2UtucCRtLiRU/exec"
 const TO_EMAIL = process.env.ADMIN_EMAIL || "gamblerspassion@gmail.com"
 
 const PROGRAM_LABELS: Record<string, string> = {

@@ -585,11 +585,6 @@ export function ApplyContent() {
                     ))}
                   </div>
 
-                  <div className="rounded-xl border border-white/15 bg-white/[0.04] p-4 mb-5">
-                    <p className="text-xs text-white/60 mb-1">Need help now?</p>
-                    <p className="text-sm text-white font-semibold">info@stance-marketing.com</p>
-                  </div>
-
                   <Link href="/" className="block">
                     <Button className="w-full h-11 rounded-xl bg-red-500 hover:bg-red-400 text-white font-semibold shadow-lg shadow-red-500/25">
                       Return Home

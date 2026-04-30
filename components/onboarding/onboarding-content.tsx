@@ -26,7 +26,6 @@ import {
   Camera,
 } from "lucide-react"
 import { type CompensationExhibit } from "@/lib/exhibits"
-import { jsPDF } from "jspdf"
 
 // ── Helpers ──
 
@@ -1577,6 +1576,7 @@ async function buildOnboardingPDF(
   contractorName: string,
   effectiveDate: string,
 ) {
+  const { jsPDF } = await import("jspdf")
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "letter" })
   const pageW = doc.internal.pageSize.getWidth()
   const pageH = doc.internal.pageSize.getHeight()

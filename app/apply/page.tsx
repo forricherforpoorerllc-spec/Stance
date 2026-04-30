@@ -1,5 +1,10 @@
 import type { Metadata } from "next"
-import { ApplyContent } from "@/components/apply/apply-content"
+import dynamic from "next/dynamic"
+
+const ApplyContent = dynamic(
+  () => import("@/components/apply/apply-content").then((m) => ({ default: m.ApplyContent })),
+  { ssr: false }
+)
 
 export const metadata: Metadata = {
   title: "Apply | Stance Marketing",

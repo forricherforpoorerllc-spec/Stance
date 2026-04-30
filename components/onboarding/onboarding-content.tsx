@@ -273,7 +273,12 @@ export function OnboardingContent({ token, prefill, exhibits }: OnboardingConten
 
   // Scroll to top of page whenever the step changes
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: "smooth" })
+    try {
+      window.scrollTo({ top: 0, behavior: "smooth" })
+    } catch {
+      // Some locked-down browser contexts can reject smooth scrolling.
+      window.scrollTo(0, 0)
+    }
   }, [step])
 
   // Determine if the current step has all required fields filled
@@ -303,7 +308,13 @@ export function OnboardingContent({ token, prefill, exhibits }: OnboardingConten
     if (!validateStep()) {
       setTimeout(() => {
         const el = document.querySelector('[data-error="true"]')
-        if (el) el.scrollIntoView({ behavior: "smooth", block: "center" })
+        if (el) {
+          try {
+            el.scrollIntoView({ behavior: "smooth", block: "center" })
+          } catch {
+            el.scrollIntoView()
+          }
+        }
       }, 60)
       return
     }

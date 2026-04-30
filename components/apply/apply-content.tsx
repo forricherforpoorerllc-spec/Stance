@@ -284,7 +284,12 @@ export function ApplyContent() {
 
   // Scroll to top of page on every step change
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: "smooth" })
+    try {
+      window.scrollTo({ top: 0, behavior: "smooth" })
+    } catch {
+      // Some locked-down browser contexts can reject smooth scrolling.
+      window.scrollTo(0, 0)
+    }
   }, [step])
 
   // Step completion detection for green button

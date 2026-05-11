@@ -17,6 +17,15 @@ export const metadata: Metadata = {
     description:
       "One application. Multiple programs. Join Stance Marketing and represent leading internet providers nationwide.",
     type: "website",
+    url: "https://stance-marketing.com/apply",
+    images: [
+      {
+        url: "https://stance-marketing.com/ApplyOpengraph.png",
+        width: 1200,
+        height: 630,
+        alt: "Apply | Stance Marketing",
+      },
+    ],
   },
   robots: {
     index: false,

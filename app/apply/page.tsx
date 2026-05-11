@@ -20,10 +20,11 @@ export const metadata: Metadata = {
     url: "https://stance-marketing.com/apply",
     images: [
       {
-        url: "https://stance-marketing.com/ApplyOpengraph.png",
+        url: "https://stance-marketing.com/images/apply-opengraph.png",
         width: 1200,
         height: 630,
         alt: "Apply | Stance Marketing",
+        type: "image/png",
       },
     ],
   },

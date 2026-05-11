@@ -26,7 +26,6 @@ import {
   Camera,
 } from "lucide-react"
 import { type CompensationExhibit } from "@/lib/exhibits"
-import { jsPDF } from "jspdf"
 
 // ── Helpers ──
 
@@ -191,11 +190,13 @@ export function OnboardingContent({ token, prefill, exhibits }: OnboardingConten
     w9SignatureDataUrl: "",
   })
 
-  const effectiveDate = new Date().toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  })
+  const [effectiveDate] = useState(() =>
+    new Date().toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    })
+  )
 
   const programLabel = PROGRAM_LABELS[data.partnerType] || data.partnerType || "Partner Program"
   const contractorName = data.legalName || `${data.firstName} ${data.lastName}`.trim()
@@ -273,7 +274,12 @@ export function OnboardingContent({ token, prefill, exhibits }: OnboardingConten
 
   // Scroll to top of page whenever the step changes
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: "smooth" })
+    try {
+      window.scrollTo({ top: 0, behavior: "smooth" })
+    } catch {
+      // Some locked-down browser contexts can reject smooth scrolling.
+      window.scrollTo(0, 0)
+    }
   }, [step])
 
   // Determine if the current step has all required fields filled
@@ -303,7 +309,13 @@ export function OnboardingContent({ token, prefill, exhibits }: OnboardingConten
     if (!validateStep()) {
       setTimeout(() => {
         const el = document.querySelector('[data-error="true"]')
-        if (el) el.scrollIntoView({ behavior: "smooth", block: "center" })
+        if (el) {
+          try {
+            el.scrollIntoView({ behavior: "smooth", block: "center" })
+          } catch {
+            el.scrollIntoView()
+          }
+        }
       }, 60)
       return
     }
@@ -613,7 +625,7 @@ export function OnboardingContent({ token, prefill, exhibits }: OnboardingConten
                   <StepSignature data={data} errors={errors} onChange={updateField} />
                 )}
                 {step === 4 && (
-                  <StepW9 data={data} errors={errors} onChange={updateField} />
+                  <StepW9 data={data} errors={errors} onChange={updateField} effectiveDate={effectiveDate} />
                 )}
                 {step === 5 && (
                   <StepIdUpload data={data} errors={errors} onChange={updateField} />
@@ -1356,10 +1368,12 @@ function StepW9({
   data,
   errors,
   onChange,
+  effectiveDate,
 }: {
   data: OnboardingData
   errors: Record<string, string>
   onChange: (name: string, value: string | boolean) => void
+  effectiveDate: string
 }) {
   const fullName = data.legalName || `${data.firstName} ${data.lastName}`.trim()
 
@@ -1533,7 +1547,7 @@ function StepW9({
               <div>
                 <p className="text-xs text-slate-400 font-semibold uppercase tracking-wide mb-0.5">Date</p>
                 <p className="text-base font-semibold text-slate-900">
-                  {new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
+                  {effectiveDate}
                 </p>
               </div>
               {data.w9SignatureDataUrl && (
@@ -1566,6 +1580,7 @@ async function buildOnboardingPDF(
   contractorName: string,
   effectiveDate: string,
 ) {
+  const { jsPDF } = await import("jspdf")
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "letter" })
   const pageW = doc.internal.pageSize.getWidth()
   const pageH = doc.internal.pageSize.getHeight()

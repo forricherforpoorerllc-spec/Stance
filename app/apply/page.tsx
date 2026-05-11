@@ -1,5 +1,10 @@
 import type { Metadata } from "next"
-import { ApplyContent } from "@/components/apply/apply-content"
+import dynamic from "next/dynamic"
+
+const ApplyContent = dynamic(
+  () => import("@/components/apply/apply-content").then((m) => ({ default: m.ApplyContent })),
+  { ssr: false }
+)
 
 export const metadata: Metadata = {
   title: "Apply | Stance Marketing",
@@ -12,6 +17,15 @@ export const metadata: Metadata = {
     description:
       "One application. Multiple programs. Join Stance Marketing and represent leading internet providers nationwide.",
     type: "website",
+    url: "https://stance-marketing.com/apply",
+    images: [
+      {
+        url: "https://stance-marketing.com/ApplyOpengraph.png",
+        width: 1200,
+        height: 630,
+        alt: "Apply | Stance Marketing",
+      },
+    ],
   },
   robots: {
     index: false,

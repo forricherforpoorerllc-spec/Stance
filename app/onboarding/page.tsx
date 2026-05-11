@@ -1,6 +1,11 @@
 import type { Metadata } from "next"
-import { OnboardingContent } from "@/components/onboarding/onboarding-content"
+import dynamic from "next/dynamic"
 import { decodePayload, getExhibitById, type OnboardingPayload } from "@/lib/exhibits"
+
+const OnboardingContent = dynamic(
+  () => import("@/components/onboarding/onboarding-content").then((m) => ({ default: m.OnboardingContent })),
+  { ssr: false }
+)
 
 export const metadata: Metadata = {
   title: "Onboarding | Stance Marketing",

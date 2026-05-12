@@ -1,8 +1,7 @@
 "use client"
 
-import React, { useState, useRef, useCallback } from "react"
+import React, { useState, useRef, useCallback, useId } from "react"
 import { Upload, Camera, X, FileText, Check, Loader2 } from "lucide-react"
-import { Button } from "@/components/ui/button"
 import { upload } from "@vercel/blob/client"
 
 interface FileUploadProps {
@@ -33,6 +32,9 @@ export function FileUpload({
   )
   const [fileName, setFileName] = useState("")
   const [fileSize, setFileSize] = useState("")
+  const uid = useId()
+  const inputId = `file-upload-${uid}`
+  const cameraId = `camera-upload-${uid}`
   const inputRef = useRef<HTMLInputElement>(null)
   const cameraRef = useRef<HTMLInputElement>(null)
 
@@ -79,8 +81,9 @@ export function FileUpload({
           multipart: file.size > 5 * 1024 * 1024,
         })
         onFileUploaded(blob.url, file.name)
-      } catch {
-        setError("Upload failed. Please try again.")
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Upload failed. Please try again."
+        setError(message)
         setPreview(null)
         setFileName("")
       } finally {
@@ -103,6 +106,8 @@ export function FileUpload({
   const handleFileChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0]
+      // Reset value immediately so iOS doesn't block re-selection of the same file
+      e.target.value = ""
       if (file) processFile(file)
     },
     [processFile]
@@ -174,16 +179,16 @@ export function FileUpload({
         </div>
       )}
 
-      {/* Drop zone */}
-      <div
+      {/* Drop zone — label natively activates the input on iOS without programmatic .click() */}
+      <label
+        htmlFor={inputId}
         onDragOver={(e) => {
           e.preventDefault()
           setIsDragging(true)
         }}
         onDragLeave={() => setIsDragging(false)}
         onDrop={handleDrop}
-        onClick={() => inputRef.current?.click()}
-        className={`border-2 border-dashed rounded-2xl transition-all cursor-pointer p-8 text-center ${
+        className={`block border-2 border-dashed rounded-2xl transition-all cursor-pointer p-8 text-center ${
           isDragging
             ? "border-red-500 bg-red-50"
             : "border-slate-300 bg-slate-50 hover:border-slate-400 hover:bg-slate-100"
@@ -199,7 +204,7 @@ export function FileUpload({
             <Upload className="w-8 h-8 text-slate-500" />
             <div>
               <p className="text-base text-slate-700 font-medium">
-                Drag and drop or click to browse
+                Drag and drop or tap to browse
               </p>
               <p className="text-sm text-slate-500 mt-1">
                 JPG, PNG, or PDF — max {maxSizeMb}MB
@@ -207,9 +212,10 @@ export function FileUpload({
             </div>
           </div>
         )}
-      </div>
+      </label>
 
       <input
+        id={inputId}
         ref={inputRef}
         type="file"
         accept={accept}
@@ -217,17 +223,17 @@ export function FileUpload({
         className="hidden"
       />
 
-      {/* Camera button for mobile */}
+      {/* Camera button for mobile — label avoids programmatic .click() on iOS */}
       <div className="mt-3 sm:hidden">
-        <Button
-          variant="outline"
-          className="w-full border-slate-300 text-slate-700 hover:bg-slate-100 h-12 rounded-xl text-base font-medium"
-          onClick={() => cameraRef.current?.click()}
+        <label
+          htmlFor={cameraId}
+          className="flex items-center justify-center w-full h-12 rounded-xl border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 text-base font-medium cursor-pointer transition-colors"
         >
           <Camera className="w-4 h-4 mr-2" />
           Take Photo
-        </Button>
+        </label>
         <input
+          id={cameraId}
           ref={cameraRef}
           type="file"
           accept="image/*"

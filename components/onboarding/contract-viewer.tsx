@@ -23,6 +23,7 @@ interface ContractViewerProps {
   onAcknowledgeChange: (checked: boolean) => void
   isReadComplete: boolean
   exhibits?: CompensationExhibit[]
+  leadsProvided?: boolean
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -261,11 +262,14 @@ function SectionBlock({ section }: { section: (typeof CONTRACT_SECTIONS)[number]
 function CompensationExhibitCard({
   exhibit,
   label,
+  leadsProvided,
 }: {
   exhibit: CompensationExhibit
   label: string
+  leadsProvided?: boolean
 }) {
   const topAmount = Math.max(...exhibit.payStructure.map((r) => r.amount))
+  const reduced = (n: number) => Math.round(n * 0.5 * 100) / 100
 
   return (
     <div className="rounded-2xl overflow-hidden border border-emerald-200 shadow-lg shadow-emerald-100/60">
@@ -277,6 +281,11 @@ function CompensationExhibitCard({
               Compensation Exhibit {label}
             </p>
             <h4 className="text-xl font-bold text-white">{exhibit.provider}</h4>
+            {leadsProvided && (
+              <p className="text-[10px] text-orange-400/80 mt-1.5 uppercase tracking-wider font-semibold">
+                Two-rate schedule — self-sourced &amp; company lead
+              </p>
+            )}
           </div>
           <div className="flex-shrink-0 bg-emerald-500/15 border border-emerald-500/25 rounded-xl px-4 py-2.5 text-right">
             <p className="text-[10px] text-emerald-400/70 mb-0.5">Up to per sale</p>
@@ -287,33 +296,63 @@ function CompensationExhibitCard({
 
       {/* Table */}
       <div className="bg-white">
-        <div className="grid grid-cols-[1fr_auto] border-b border-slate-100">
-          <div className="px-5 py-2.5 text-[10px] font-bold tracking-[0.18em] text-slate-500 uppercase">Service / Plan</div>
-          <div className="px-5 py-2.5 text-[10px] font-bold tracking-[0.18em] text-slate-500 uppercase text-right">Your Payout</div>
-        </div>
-        {exhibit.payStructure.map((row, i) => (
-          <div
-            key={i}
-            className={`grid grid-cols-[1fr_auto] items-center border-b border-slate-50 last:border-0 ${
-              i % 2 === 0 ? "bg-white" : "bg-slate-50/60"
-            }`}
-          >
-            <div className="px-5 py-3 text-sm text-slate-700 font-medium">{row.service}</div>
-            <div className="px-5 py-3 flex items-center gap-1.5 justify-end">
-              <DollarSign className="h-3 w-3 text-emerald-600 flex-shrink-0" />
-              <span className="text-base font-bold text-emerald-700 tabular-nums">
-                {fmt(row.amount).replace("$", "")}
-              </span>
-            </div>
+        {leadsProvided ? (
+          <div className="grid grid-cols-[1fr_auto_auto]">
+            <div className="px-5 py-2.5 text-[10px] font-bold tracking-[0.18em] text-slate-500 uppercase bg-slate-100 border-b border-slate-200">Service / Plan</div>
+            <div className="px-5 py-2.5 text-[10px] font-bold tracking-[0.18em] text-slate-500 uppercase text-right bg-slate-100 border-b border-slate-200">Self-Sourced</div>
+            <div className="px-5 py-2.5 text-[10px] font-bold tracking-[0.18em] text-orange-500 uppercase text-right bg-slate-100 border-b border-slate-200">Co. Lead (−50%)</div>
+            {exhibit.payStructure.map((row, i) => {
+              const cellBg = i % 2 === 0 ? "bg-white" : "bg-slate-50/60"
+              return (
+                <React.Fragment key={i}>
+                  <div className={`px-5 py-3 text-sm text-slate-700 font-medium border-b border-slate-50 last:border-0 ${cellBg}`}>{row.service}</div>
+                  <div className={`px-5 py-3 text-base font-bold text-emerald-700 tabular-nums text-right border-b border-slate-50 last:border-0 ${cellBg}`}>
+                    {fmt(row.amount)}
+                  </div>
+                  <div className={`px-5 py-3 text-base font-bold text-orange-600 tabular-nums text-right border-b border-slate-50 last:border-0 ${cellBg}`}>
+                    {fmt(reduced(row.amount))}
+                  </div>
+                </React.Fragment>
+              )
+            })}
           </div>
-        ))}
+        ) : (
+          <>
+            <div className="grid grid-cols-[1fr_auto] border-b border-slate-100">
+              <div className="px-5 py-2.5 text-[10px] font-bold tracking-[0.18em] text-slate-500 uppercase">Service / Plan</div>
+              <div className="px-5 py-2.5 text-[10px] font-bold tracking-[0.18em] text-slate-500 uppercase text-right">Your Payout</div>
+            </div>
+            {exhibit.payStructure.map((row, i) => (
+              <div
+                key={i}
+                className={`grid grid-cols-[1fr_auto] items-center border-b border-slate-50 last:border-0 ${
+                  i % 2 === 0 ? "bg-white" : "bg-slate-50/60"
+                }`}
+              >
+                <div className="px-5 py-3 text-sm text-slate-700 font-medium">{row.service}</div>
+                <div className="px-5 py-3 flex items-center gap-1.5 justify-end">
+                  <DollarSign className="h-3 w-3 text-emerald-600 flex-shrink-0" />
+                  <span className="text-base font-bold text-emerald-700 tabular-nums">
+                    {fmt(row.amount).replace("$", "")}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </>
+        )}
       </div>
 
       {/* Footer note */}
       <div className="bg-slate-50 border-t border-slate-100 px-5 py-3">
-        <p className="text-[11px] text-slate-400 leading-relaxed">
-          Compensation is per approved Activation as defined in the Agreement. Subject to Chargebacks, holdbacks, and reconciliation per Section 6.
-        </p>
+        {leadsProvided ? (
+          <p className="text-[11px] text-slate-500 leading-relaxed">
+            <span className="font-semibold text-orange-600">Company lead rate is 50% less</span> than the self-sourced rate. The applicable rate is determined by whether the lead was sourced by Contractor or provided by Company. Subject to Chargebacks, holdbacks, and reconciliation per Section 6.
+          </p>
+        ) : (
+          <p className="text-[11px] text-slate-400 leading-relaxed">
+            Compensation is per approved Activation as defined in the Agreement. Subject to Chargebacks, holdbacks, and reconciliation per Section 6.
+          </p>
+        )}
       </div>
     </div>
   )
@@ -338,6 +377,7 @@ export function ContractViewer({
   onAcknowledgeChange,
   isReadComplete,
   exhibits,
+  leadsProvided,
 }: ContractViewerProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false)
@@ -446,6 +486,7 @@ export function ContractViewer({
                     key={exhibit.id}
                     exhibit={exhibit}
                     label={EXHIBIT_LABELS[i] ?? String(i + 1)}
+                    leadsProvided={leadsProvided}
                   />
                 ))}
               </div>

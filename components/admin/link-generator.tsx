@@ -64,6 +64,9 @@ export function AdminLinkGenerator() {
   const [amounts, setAmounts]             = useState<Record<string, number[]>>({})
   const [expandedIds, setExpandedIds]     = useState<Set<string>>(new Set())
 
+  // ── Commission settings
+  const [leadsProvided, setLeadsProvided] = useState(false)
+
   // ── URL state
   const [generatedUrl, setGeneratedUrl]   = useState<string | null>(null)
   const [copied, setCopied]               = useState(false)
@@ -160,6 +163,7 @@ export function AdminLinkGenerator() {
       partnerType,
       exhibitIds,
       overrides,
+      leadsProvided: leadsProvided || undefined,
     }
 
     const encoded = encodePayload(payload)
@@ -285,6 +289,43 @@ export function AdminLinkGenerator() {
                     </button>
                   )
                 })}
+              </div>
+            </div>
+          </div>
+
+          {/* Leads toggle — full-width row below the grid */}
+          <div className="px-6 pb-6">
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={() => { setLeadsProvided((v) => !v); setGeneratedUrl(null) }}
+              onKeyDown={(e) => { if (e.key === " " || e.key === "Enter") { setLeadsProvided((v) => !v); setGeneratedUrl(null) } }}
+              className={`flex items-center justify-between rounded-xl border px-5 py-4 cursor-pointer transition-all ${
+                leadsProvided
+                  ? "border-orange-500/40 bg-orange-500/[0.07]"
+                  : "border-white/[0.08] bg-white/[0.02] hover:border-white/[0.14]"
+              }`}
+            >
+              <div>
+                <p className={`text-sm font-bold ${leadsProvided ? "text-orange-300" : "text-slate-400"}`}>
+                  Company provides leads
+                </p>
+                <p className="text-xs text-slate-600 mt-0.5">
+                  {leadsProvided
+                    ? "Commission is 50% less — both rates shown in contract"
+                    : "Contractor self-sources leads — full commission applies"}
+                </p>
+              </div>
+              <div
+                className={`relative flex-shrink-0 w-10 h-5 rounded-full transition-colors ${
+                  leadsProvided ? "bg-orange-500" : "bg-white/10"
+                }`}
+              >
+                <span
+                  className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${
+                    leadsProvided ? "translate-x-5" : "translate-x-0"
+                  }`}
+                />
               </div>
             </div>
           </div>

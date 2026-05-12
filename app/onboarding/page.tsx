@@ -89,6 +89,7 @@ export default async function OnboardingPage({ searchParams }: PageProps) {
             : {}
         }
         exhibits={resolvedExhibits as import("@/lib/exhibits").CompensationExhibit[]}
+        leadsProvided={payload?.leadsProvided ?? false}
       />
     </main>
   )

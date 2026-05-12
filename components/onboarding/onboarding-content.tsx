@@ -150,9 +150,10 @@ interface OnboardingContentProps {
     legalName?: string
   }
   exhibits?: CompensationExhibit[]
+  leadsProvided?: boolean
 }
 
-export function OnboardingContent({ token, prefill, exhibits }: OnboardingContentProps) {
+export function OnboardingContent({ token, prefill, exhibits, leadsProvided = false }: OnboardingContentProps) {
   const [started, setStarted] = useState(false)
   const [step, setStep] = useState(1)
   const [direction, setDirection] = useState(1)
@@ -593,6 +594,7 @@ export function OnboardingContent({ token, prefill, exhibits }: OnboardingConten
               onAcknowledgeChange={(checked) => updateField("isContractRead", checked)}
               isReadComplete={data.isContractRead}
               exhibits={exhibits}
+              leadsProvided={leadsProvided}
             />
             </div>
           </div>
@@ -640,6 +642,7 @@ export function OnboardingContent({ token, prefill, exhibits }: OnboardingConten
                     contractorName={contractorName}
                     effectiveDate={effectiveDate}
                     exhibits={exhibits}
+                    leadsProvided={leadsProvided}
                   />
                 )}
               </motion.div>
@@ -1121,12 +1124,14 @@ function StepReview({
   contractorName,
   effectiveDate,
   exhibits,
+  leadsProvided,
 }: {
   data: OnboardingData
   programLabel: string
   contractorName: string
   effectiveDate: string
   exhibits?: CompensationExhibit[]
+  leadsProvided?: boolean
 }) {
   return (
     <div>
@@ -1184,6 +1189,66 @@ function StepReview({
             />
           )}
         </ReviewSection>
+
+        {exhibits && exhibits.length > 0 && (
+          <div className="space-y-3">
+            {exhibits.map((exhibit) => {
+              const reduced = (n: number) => Math.round(n * 0.5 * 100) / 100
+              const fmtAmt = (n: number) => n % 1 === 0 ? `$${n}` : `$${n.toFixed(2)}`
+              return (
+                <div key={exhibit.id} className="border border-slate-200 bg-white rounded-2xl overflow-hidden shadow-sm">
+                  <div className="px-5 py-3 bg-slate-800 flex items-center justify-between">
+                    <h3 className="text-sm font-bold text-white">{exhibit.provider}</h3>
+                    {leadsProvided && (
+                      <span className="text-[10px] font-bold tracking-wider uppercase bg-orange-500/20 border border-orange-500/30 text-orange-300 px-2 py-0.5 rounded-full">
+                        Two-rate schedule
+                      </span>
+                    )}
+                  </div>
+                  <div>
+                    {leadsProvided ? (
+                      <>
+                        <div className="grid grid-cols-[1fr_auto_auto]">
+                          <div className="px-4 py-2 text-[10px] font-bold tracking-[0.15em] text-slate-500 uppercase bg-slate-100 border-b border-slate-200">Service</div>
+                          <div className="px-4 py-2 text-[10px] font-bold tracking-[0.15em] text-slate-500 uppercase text-right bg-slate-100 border-b border-slate-200">Self-Sourced</div>
+                          <div className="px-4 py-2 text-[10px] font-bold tracking-[0.15em] text-orange-500 uppercase text-right bg-slate-100 border-b border-slate-200">Co. Lead (−50%)</div>
+                          {exhibit.payStructure.map((row, i) => {
+                            const cellBg = i % 2 === 0 ? "bg-white" : "bg-slate-50/50"
+                            return (
+                              <React.Fragment key={i}>
+                                <div className={`px-4 py-2.5 text-sm text-slate-700 font-medium ${cellBg}`}>{row.service}</div>
+                                <div className={`px-4 py-2.5 text-sm font-bold text-emerald-700 tabular-nums text-right ${cellBg}`}>{fmtAmt(row.amount)}</div>
+                                <div className={`px-4 py-2.5 text-sm font-bold text-orange-600 tabular-nums text-right ${cellBg}`}>{fmtAmt(reduced(row.amount))}</div>
+                              </React.Fragment>
+                            )
+                          })}
+                        </div>
+                        <div className="px-4 py-2.5 bg-orange-50 border-t border-orange-100">
+                          <p className="text-[11px] text-orange-700 leading-relaxed">
+                            Company lead rate is 50% less than self-sourced rate. Applies to all company-provided leads as set forth in the agreement.
+                          </p>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="grid grid-cols-[1fr_auto] border-b border-slate-100 bg-slate-50">
+                          <div className="px-4 py-2 text-[10px] font-bold tracking-[0.15em] text-slate-500 uppercase">Service</div>
+                          <div className="px-4 py-2 text-[10px] font-bold tracking-[0.15em] text-slate-500 uppercase text-right">Your Payout</div>
+                        </div>
+                        {exhibit.payStructure.map((row, i) => (
+                          <div key={i} className={`grid grid-cols-[1fr_auto] items-center border-b border-slate-50 last:border-0 ${i % 2 === 0 ? "bg-white" : "bg-slate-50/50"}`}>
+                            <div className="px-4 py-2.5 text-sm text-slate-700 font-medium">{row.service}</div>
+                            <div className="px-4 py-2.5 text-sm font-bold text-emerald-700 tabular-nums text-right">{fmtAmt(row.amount)}</div>
+                          </div>
+                        ))}
+                      </>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
 
         <ReviewSection title="Documents">
           <ReviewRow label="Government ID" value={data.idDocName || "Not uploaded"} />

@@ -23,6 +23,8 @@ export interface OnboardingPayload {
   exhibitIds: string[]
   /** Per-exhibit row-index → dollar override */
   overrides?: Record<string, Record<number, number>>
+  /** When true, company is providing leads — commission is 20% less */
+  leadsProvided?: boolean
 }
 
 // ── Master compensation data ──────────────────────────────────────────────────

@@ -17,7 +17,7 @@ interface FileUploadProps {
 export function FileUpload({
   label,
   description,
-  accept = "image/jpeg,image/png,application/pdf",
+  accept = "image/*,application/pdf",
   maxSizeMb = 10,
   onFileUploaded,
   uploadedUrl,
@@ -54,10 +54,11 @@ export function FileUpload({
         return
       }
 
-      // Validate type
-      const validTypes = accept.split(",").map((t) => t.trim())
-      if (!validTypes.includes(file.type) && file.type !== "") {
-        setError(`Invalid file type. Accepted: ${validTypes.map((t) => t.split("/").pop()?.toUpperCase()).join(", ")}.`)
+      // Validate by extension (more reliable than MIME on iOS — HEIC photos report inconsistent types)
+      const ext = (file.name.split(".").pop() || "").toLowerCase()
+      const allowedExts = ["jpg", "jpeg", "png", "webp", "heic", "heif", "pdf"]
+      if (ext && !allowedExts.includes(ext)) {
+        setError(`Unsupported file type (.${ext}). Use JPG, PNG, HEIC, or PDF.`)
         return
       }
 
@@ -65,8 +66,12 @@ export function FileUpload({
       setFileName(file.name)
       setFileSize(formatBytes(file.size))
 
-      // Generate preview for images
-      if (file.type.startsWith("image/")) {
+      // Generate preview for images (skip HEIC — browsers can't render it)
+      const isViewableImage =
+        file.type.startsWith("image/") &&
+        !/heic|heif/i.test(file.type) &&
+        !/\.(heic|heif)$/i.test(file.name)
+      if (isViewableImage) {
         const reader = new FileReader()
         reader.onload = (e) => setPreview(e.target?.result as string)
         reader.readAsDataURL(file)
@@ -75,7 +80,13 @@ export function FileUpload({
       }
 
       try {
-        const blob = await upload(file.name, file, {
+        // Sanitize filename — iOS sometimes returns "image.jpg" with weird unicode or spaces
+        const safeName =
+          file.name
+            .normalize("NFKD")
+            .replace(/[^\w.\-]+/g, "_")
+            .slice(0, 80) || `upload-${Date.now()}.${ext || "bin"}`
+        const blob = await upload(safeName, file, {
           access: "public",
           handleUploadUrl: "/api/upload",
           multipart: file.size > 5 * 1024 * 1024,
@@ -90,7 +101,7 @@ export function FileUpload({
         setIsUploading(false)
       }
     },
-    [accept, maxSizeMb, onFileUploaded]
+    [maxSizeMb, onFileUploaded]
   )
 
   const handleDrop = useCallback(
@@ -104,11 +115,14 @@ export function FileUpload({
   )
 
   const handleFileChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0]
-      // Reset value immediately so iOS doesn't block re-selection of the same file
-      e.target.value = ""
-      if (file) processFile(file)
+    (e: React.ChangeEvent<HTMLInputElement> | React.FormEvent<HTMLInputElement>) => {
+      const input = e.currentTarget as HTMLInputElement
+      const file = input.files?.[0]
+      if (file) {
+        processFile(file)
+        // Reset AFTER reading the file so iOS doesn't lose the reference
+        setTimeout(() => { input.value = "" }, 0)
+      }
     },
     [processFile]
   )
@@ -207,7 +221,7 @@ export function FileUpload({
                 Drag and drop or tap to browse
               </p>
               <p className="text-sm text-slate-500 mt-1">
-                JPG, PNG, or PDF — max {maxSizeMb}MB
+                JPG, PNG, HEIC, or PDF — max {maxSizeMb}MB
               </p>
             </div>
           </div>
@@ -220,7 +234,8 @@ export function FileUpload({
         type="file"
         accept={accept}
         onChange={handleFileChange}
-        className="hidden"
+        onInput={handleFileChange}
+        className="sr-only"
       />
 
       {/* Camera button for mobile — label avoids programmatic .click() on iOS */}
@@ -239,7 +254,8 @@ export function FileUpload({
           accept="image/*"
           capture="environment"
           onChange={handleFileChange}
-          className="hidden"
+          onInput={handleFileChange}
+          className="sr-only"
         />
       </div>
     </div>

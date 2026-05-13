@@ -58,6 +58,7 @@ export function AdminLinkGenerator() {
   const [phone, setPhone]             = useState("")
   const [partnerType, setPartnerType] = useState("sales-agent")
   const [role, setRole]               = useState<RoleKey>("salesAgent")
+  const [isGeneric, setIsGeneric]     = useState(false)
 
   // ── Provider state: which are enabled, their per-row amounts, and expansion
   const [enabledIds, setEnabledIds]       = useState<Set<string>>(new Set())
@@ -135,13 +136,15 @@ export function AdminLinkGenerator() {
 
   const validate = useCallback((): boolean => {
     const e: Record<string, string> = {}
-    if (!name.trim()) e.name = "Name is required"
-    if (!email.trim()) e.email = "Email is required"
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) e.email = "Enter a valid email"
+    if (!isGeneric) {
+      if (!name.trim()) e.name = "Name is required"
+      if (!email.trim()) e.email = "Email is required"
+      else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) e.email = "Enter a valid email"
+    }
     if (enabledIds.size === 0) e.providers = "Select at least one provider"
     setErrors(e)
     return Object.keys(e).length === 0
-  }, [name, email, enabledIds])
+  }, [name, email, enabledIds, isGeneric])
 
   const generateLink = useCallback(() => {
     if (!validate()) return
@@ -157,9 +160,9 @@ export function AdminLinkGenerator() {
     }
 
     const payload: OnboardingPayload = {
-      name: name.trim(),
-      email: email.trim(),
-      phone: phone.trim() || undefined,
+      name: isGeneric ? "" : name.trim(),
+      email: isGeneric ? "" : email.trim(),
+      phone: isGeneric ? undefined : phone.trim() || undefined,
       partnerType,
       exhibitIds,
       overrides,
@@ -216,42 +219,76 @@ export function AdminLinkGenerator() {
 
         {/* ── Section: Contractor Info ── */}
         <div className="rounded-2xl border border-white/[0.08] bg-[#0d1117] overflow-hidden">
-          <div className="px-6 py-4 border-b border-white/[0.06] flex items-center gap-3">
+          <div className="px-6 py-4 border-b border-white/[0.06] flex items-center gap-3 flex-wrap">
             <div className="w-1 h-5 rounded-full bg-red-500 flex-shrink-0" />
             <h2 className="text-sm font-bold text-white uppercase tracking-[0.18em]">Contractor Info</h2>
+            <div className="ml-auto flex items-center gap-1 bg-white/[0.04] border border-white/[0.08] rounded-xl p-1">
+              <button
+                onClick={() => { setIsGeneric(false); setGeneratedUrl(null) }}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                  !isGeneric ? "bg-red-500 text-white shadow" : "text-slate-500 hover:text-slate-300"
+                }`}
+              >
+                Personalized
+              </button>
+              <button
+                onClick={() => { setIsGeneric(true); setGeneratedUrl(null) }}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                  isGeneric ? "bg-red-500 text-white shadow" : "text-slate-500 hover:text-slate-300"
+                }`}
+              >
+                Generic / Bulk
+              </button>
+            </div>
           </div>
           <div className="p-6 grid sm:grid-cols-2 gap-5">
-            <div>
-              <Label className="text-slate-400 text-sm mb-2 block">Full name <span className="text-red-500">*</span></Label>
-              <Input
-                value={name}
-                onChange={(e) => { setName(e.target.value); setGeneratedUrl(null) }}
-                placeholder="Jane Smith"
-                className="bg-white/[0.04] border-white/[0.1] text-white placeholder:text-slate-600 h-11 rounded-xl focus:border-red-500/60 focus:ring-0"
-              />
-              {errors.name && <p className="text-red-500 text-xs mt-1.5">{errors.name}</p>}
-            </div>
-            <div>
-              <Label className="text-slate-400 text-sm mb-2 block">Email address <span className="text-red-500">*</span></Label>
-              <Input
-                value={email}
-                onChange={(e) => { setEmail(e.target.value); setGeneratedUrl(null) }}
-                placeholder="jane@example.com"
-                type="email"
-                className="bg-white/[0.04] border-white/[0.1] text-white placeholder:text-slate-600 h-11 rounded-xl focus:border-red-500/60 focus:ring-0"
-              />
-              {errors.email && <p className="text-red-500 text-xs mt-1.5">{errors.email}</p>}
-            </div>
-            <div>
-              <Label className="text-slate-400 text-sm mb-2 block">Phone number</Label>
-              <Input
-                value={phone}
-                onChange={(e) => { setPhone(e.target.value); setGeneratedUrl(null) }}
-                placeholder="(555) 555-5555"
-                type="tel"
-                className="bg-white/[0.04] border-white/[0.1] text-white placeholder:text-slate-600 h-11 rounded-xl focus:border-red-500/60 focus:ring-0"
-              />
-            </div>
+            {isGeneric ? (
+              <div className="sm:col-span-2 flex items-start gap-3 rounded-xl border border-blue-500/20 bg-blue-500/[0.06] px-4 py-3.5">
+                <div className="mt-0.5 h-5 w-5 rounded-full border border-blue-500/40 bg-blue-500/10 flex items-center justify-center flex-shrink-0">
+                  <span className="text-blue-400 text-xs font-bold">i</span>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-blue-300">Generic link — no personal info required</p>
+                  <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
+                    Applicants fill in their own name, email, and phone during onboarding. Safe to send to multiple people.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div>
+                  <Label className="text-slate-400 text-sm mb-2 block">Full name <span className="text-red-500">*</span></Label>
+                  <Input
+                    value={name}
+                    onChange={(e) => { setName(e.target.value); setGeneratedUrl(null) }}
+                    placeholder="Jane Smith"
+                    className="bg-white/[0.04] border-white/[0.1] text-white placeholder:text-slate-600 h-11 rounded-xl focus:border-red-500/60 focus:ring-0"
+                  />
+                  {errors.name && <p className="text-red-500 text-xs mt-1.5">{errors.name}</p>}
+                </div>
+                <div>
+                  <Label className="text-slate-400 text-sm mb-2 block">Email address <span className="text-red-500">*</span></Label>
+                  <Input
+                    value={email}
+                    onChange={(e) => { setEmail(e.target.value); setGeneratedUrl(null) }}
+                    placeholder="jane@example.com"
+                    type="email"
+                    className="bg-white/[0.04] border-white/[0.1] text-white placeholder:text-slate-600 h-11 rounded-xl focus:border-red-500/60 focus:ring-0"
+                  />
+                  {errors.email && <p className="text-red-500 text-xs mt-1.5">{errors.email}</p>}
+                </div>
+                <div>
+                  <Label className="text-slate-400 text-sm mb-2 block">Phone number</Label>
+                  <Input
+                    value={phone}
+                    onChange={(e) => { setPhone(e.target.value); setGeneratedUrl(null) }}
+                    placeholder="(555) 555-5555"
+                    type="tel"
+                    className="bg-white/[0.04] border-white/[0.1] text-white placeholder:text-slate-600 h-11 rounded-xl focus:border-red-500/60 focus:ring-0"
+                  />
+                </div>
+              </>
+            )}
             <div>
               <Label className="text-slate-400 text-sm mb-2 block">Program type</Label>
               <div className="relative">
@@ -516,11 +553,19 @@ export function AdminLinkGenerator() {
                 <div className="mt-5 pt-5 border-t border-white/[0.06] grid sm:grid-cols-3 gap-4">
                   <div>
                     <p className="text-xs text-slate-600 mb-1">Contractor</p>
-                    <p className="text-sm text-slate-300 font-medium">{name}</p>
+                    <p className="text-sm font-medium">
+                      {isGeneric
+                        ? <span className="text-blue-400">Generic / Bulk</span>
+                        : <span className="text-slate-300">{name}</span>}
+                    </p>
                   </div>
                   <div>
                     <p className="text-xs text-slate-600 mb-1">Email</p>
-                    <p className="text-sm text-slate-300 font-medium">{email}</p>
+                    <p className="text-sm font-medium">
+                      {isGeneric
+                        ? <span className="text-slate-600 italic">filled in by applicant</span>
+                        : <span className="text-slate-300">{email}</span>}
+                    </p>
                   </div>
                   <div>
                     <p className="text-xs text-slate-600 mb-1">Exhibits</p>

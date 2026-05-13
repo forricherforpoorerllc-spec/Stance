@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import dynamic from "next/dynamic"
+import { list } from "@vercel/blob"
 import { decodePayload, getExhibitById, type OnboardingPayload } from "@/lib/exhibits"
 
 const OnboardingContent = dynamic(
@@ -43,8 +44,9 @@ const INVALID_LINK_UI = (
 
 async function fetchPayloadById(id: string): Promise<OnboardingPayload | null> {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"
-    const res = await fetch(`${baseUrl}/api/onboard-link?id=${id}`, { cache: "no-store" })
+    const { blobs } = await list({ prefix: `onboarding-links/${id}.json` })
+    if (!blobs.length) return null
+    const res = await fetch(blobs[0].url, { cache: "no-store" })
     if (!res.ok) return null
     return await res.json()
   } catch {

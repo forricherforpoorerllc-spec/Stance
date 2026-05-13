@@ -201,6 +201,9 @@ export function OnboardingContent({ token, prefill, exhibits, leadsProvided = fa
 
   const programLabel = PROGRAM_LABELS[data.partnerType] || data.partnerType || "Partner Program"
   const contractorName = data.legalName || `${data.firstName} ${data.lastName}`.trim()
+  const roleFallback = ["sales-agent", "spectrum-event", "tmobile-d2d", "verizon-d2d"].includes(data.partnerType)
+    ? "New Agent"
+    : "Partner"
 
   const updateField = useCallback(
     (name: string, value: string | boolean) => {
@@ -398,7 +401,7 @@ export function OnboardingContent({ token, prefill, exhibits, leadsProvided = fa
                   </div>
                   <div>
                     <p className="text-xs uppercase tracking-[0.2em] font-semibold text-emerald-100 mb-1">Onboarding Completed</p>
-                    <h1 className="text-2xl sm:text-4xl font-extrabold leading-tight">Welcome to Stance, {data.firstName || "Partner"}</h1>
+                    <h1 className="text-2xl sm:text-4xl font-extrabold leading-tight">Welcome to Stance, {data.firstName || roleFallback}</h1>
                     <p className="mt-2 text-emerald-50/95 text-sm sm:text-base max-w-2xl">
                       Your agreement is fully executed and your onboarding package is ready.
                       Download your complete signed contract packet below.
@@ -491,7 +494,7 @@ export function OnboardingContent({ token, prefill, exhibits, leadsProvided = fa
               <ClipboardList className="h-8 w-8 text-red-500" />
             </div>
             <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-3">
-              Welcome, {data.firstName || "Partner"}
+              Welcome, {data.firstName || roleFallback}
             </h1>
             <p className="text-slate-600 text-base sm:text-lg mb-8 max-w-md mx-auto leading-relaxed">
               Complete your onboarding to finalize your {programLabel} agreement. You&apos;ll review and sign your contract, upload documents, and be ready to start.

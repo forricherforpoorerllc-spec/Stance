@@ -12,8 +12,21 @@ const ALLOWED_TYPES = [
   "application/pdf",
 ]
 
+function getUploadConfigError() {
+  if (!process.env.BLOB_READ_WRITE_TOKEN) {
+    return "Upload storage is not configured. Set BLOB_READ_WRITE_TOKEN on the deployment environment."
+  }
+
+  return null
+}
+
 export async function POST(req: NextRequest) {
   const contentType = req.headers.get("content-type") ?? ""
+  const configError = getUploadConfigError()
+
+  if (configError) {
+    return NextResponse.json({ error: configError }, { status: 500 })
+  }
 
   // Client-side upload: browser uploads directly to Vercel Blob using a short-lived token.
   // This bypasses the serverless function body-size limit for large photo files.

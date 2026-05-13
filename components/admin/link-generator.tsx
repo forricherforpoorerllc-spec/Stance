@@ -13,12 +13,12 @@ import {
   ChevronUp,
   Copy,
   ExternalLink,
+  Loader2,
   LogOut,
   Zap,
 } from "lucide-react"
 import {
   PROVIDERS,
-  encodePayload,
   getDefaultAmountsForProvider,
   getDefaultRole,
   type OnboardingPayload,
@@ -72,6 +72,7 @@ export function AdminLinkGenerator() {
   const [generatedUrl, setGeneratedUrl]   = useState<string | null>(null)
   const [copied, setCopied]               = useState(false)
   const [errors, setErrors]               = useState<Record<string, string>>({})
+  const [isGenerating, setIsGenerating]   = useState(false)
 
   // When role changes, refresh amounts for already-enabled providers
   const handleRoleChange = useCallback((newRole: RoleKey) => {
@@ -146,7 +147,7 @@ export function AdminLinkGenerator() {
     return Object.keys(e).length === 0
   }, [name, email, enabledIds, isGeneric])
 
-  const generateLink = useCallback(() => {
+  const generateLink = useCallback(async () => {
     if (!validate()) return
 
     const exhibitIds = Array.from(enabledIds)
@@ -169,10 +170,23 @@ export function AdminLinkGenerator() {
       leadsProvided: leadsProvided || undefined,
     }
 
-    const encoded = encodePayload(payload)
-    const base = typeof window !== "undefined" ? window.location.origin : ""
-    setGeneratedUrl(`${base}/onboarding?d=${encoded}`)
-  }, [validate, name, email, partnerType, enabledIds, amounts, role])
+    setIsGenerating(true)
+    try {
+      const res = await fetch("/api/onboard-link", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
+      if (!res.ok) throw new Error("Failed to create link")
+      const { id } = await res.json()
+      const base = typeof window !== "undefined" ? window.location.origin : ""
+      setGeneratedUrl(`${base}/onboarding?id=${id}`)
+    } catch {
+      setErrors((prev) => ({ ...prev, submit: "Failed to generate link. Check your connection and try again." }))
+    } finally {
+      setIsGenerating(false)
+    }
+  }, [validate, name, email, partnerType, enabledIds, amounts, role, leadsProvided, isGeneric])
 
   const copyUrl = useCallback(async () => {
     if (!generatedUrl) return
@@ -490,13 +504,19 @@ export function AdminLinkGenerator() {
         <div className="rounded-2xl border border-red-500/20 bg-gradient-to-r from-red-500/[0.07] to-transparent p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4">
           <Button
             onClick={generateLink}
-            className="bg-red-500 hover:bg-red-400 text-white font-bold rounded-xl px-8 h-12 shadow-lg shadow-red-500/40 transition-all text-sm tracking-wide"
+            disabled={isGenerating}
+            className="bg-red-500 hover:bg-red-400 text-white font-bold rounded-xl px-8 h-12 shadow-lg shadow-red-500/40 transition-all text-sm tracking-wide disabled:opacity-60"
           >
-            <Zap className="mr-2 h-4 w-4" />
-            Generate Onboarding Link
+            {isGenerating ? (
+              <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving link...</>
+            ) : (
+              <><Zap className="mr-2 h-4 w-4" />Generate Onboarding Link</>
+            )}
           </Button>
           {enabledCount === 0 ? (
             <p className="text-slate-600 text-sm">Select at least one provider above to continue</p>
+          ) : errors.submit ? (
+            <p className="text-red-400 text-sm">{errors.submit}</p>
           ) : (
             <p className="text-slate-500 text-sm">
               Ready — <span className="text-red-400 font-semibold">{enabledCount} provider{enabledCount !== 1 ? "s" : ""}</span> will be included in the link

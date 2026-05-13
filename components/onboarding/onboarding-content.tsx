@@ -339,7 +339,7 @@ export function OnboardingContent({ token, prefill, exhibits, leadsProvided = fa
     try {
       let onboardingPdfUrl = ""
       try {
-        onboardingPdfUrl = await uploadOnboardingPDF(data, programLabel, contractorName, effectiveDate)
+        onboardingPdfUrl = await uploadOnboardingPDF(data, programLabel, contractorName, effectiveDate, exhibits)
       } catch {
         // Non-fatal — continue without PDF URL
       }
@@ -431,7 +431,7 @@ export function OnboardingContent({ token, prefill, exhibits, leadsProvided = fa
                     onClick={async () => {
                       setIsDownloading(true)
                       try {
-                        await downloadOnboardingPDF(data, programLabel, contractorName, effectiveDate)
+                        await downloadOnboardingPDF(data, programLabel, contractorName, effectiveDate, exhibits)
                       } finally {
                         setIsDownloading(false)
                       }
@@ -1053,7 +1053,7 @@ function StepBadgePhoto({
       <FileUpload
         label="Badge Photo"
         description="Professional headshot. Clear, well-lit, front-facing."
-        accept="image/jpeg,image/png"
+        accept="image/*"
         onFileUploaded={(url, name) => {
           onChange("badgePhotoUrl", url)
           onChange("badgePhotoName", name)
@@ -1647,6 +1647,7 @@ async function buildOnboardingPDF(
   programLabel: string,
   contractorName: string,
   effectiveDate: string,
+  exhibits?: CompensationExhibit[],
 ) {
   const { jsPDF } = await import("jspdf")
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "letter" })
@@ -1994,11 +1995,64 @@ async function buildOnboardingPDF(
   await addRemoteImagePanel("Government ID", data.idDocUrl)
   await addRemoteImagePanel("Badge Photo", data.badgePhotoUrl)
 
+  // ── Compensation Schedule ──
+  if (exhibits && exhibits.length > 0) {
+    addPage()
+    sectionHeader("COMPENSATION SCHEDULE")
+    paragraph(
+      "The following compensation rates apply to this Independent Contractor Agreement. All amounts represent per-sale commissions paid by Stance Marketing LLC.",
+      8.5,
+      "#64748b",
+    )
+    y += 4
+
+    const colServiceW = contentW * 0.72
+    const colAmountW = contentW * 0.28
+
+    for (const exhibit of exhibits) {
+      checkPageBreak(32)
+
+      // Exhibit header band
+      doc.setFillColor("#0f172a")
+      doc.rect(margin, y, contentW, 10, "F")
+      doc.setFillColor(RED)
+      doc.rect(margin, y, 3.5, 10, "F")
+      text(exhibit.name, margin + 7, y + 7, { size: 9, bold: true, color: "#ffffff" })
+      text(exhibit.provider, pageW - margin - 4, y + 7, { align: "right", size: 8, color: "#94a3b8" })
+      y += 10
+
+      // Table column headers
+      doc.setFillColor("#1e293b")
+      doc.rect(margin, y, contentW, 8, "F")
+      text("SERVICE", margin + 4, y + 5.5, { size: 7.5, bold: true, color: "#94a3b8" })
+      text("AMOUNT", pageW - margin - 4, y + 5.5, { align: "right", size: 7.5, bold: true, color: "#94a3b8" })
+      y += 8
+
+      rowParity = 0
+      for (const payRow of exhibit.payStructure) {
+        const rH = 8
+        checkPageBreak(rH + 1)
+        doc.setFillColor(rowParity % 2 === 0 ? "#f8fafc" : "#ffffff")
+        doc.rect(margin, y, contentW, rH, "F")
+        text(payRow.service, margin + 4, y + 5.5, { size: 8.5, color: "#334155" })
+        const amt = payRow.amount % 1 === 0 ? `$${payRow.amount}` : `$${payRow.amount.toFixed(2)}`
+        text(amt, pageW - margin - 4, y + 5.5, { align: "right", size: 8.5, bold: true, color: "#0f172a" })
+        doc.setDrawColor("#e9edf2")
+        doc.line(margin, y + rH, pageW - margin, y + rH)
+        rowParity++
+        y += rH
+      }
+      y += 8
+    }
+  }
+
   checkPageBreak(14)
   line(margin, y, pageW - margin, y)
   y += 6
   paragraph(
-    `This packet contains the executed Independent Contractor Agreement, W-9 certification, electronic signatures, and uploaded onboarding documents for ${contractorName}.`,
+    `This packet contains the executed Independent Contractor Agreement, W-9 certification, electronic signatures, uploaded onboarding documents${
+      exhibits && exhibits.length > 0 ? ", and compensation schedule" : ""
+    } for ${contractorName}.`,
     8,
     "#64748b",
   )
@@ -2026,8 +2080,9 @@ async function downloadOnboardingPDF(
   programLabel: string,
   contractorName: string,
   effectiveDate: string,
+  exhibits?: CompensationExhibit[],
 ): Promise<void> {
-  const doc = await buildOnboardingPDF(data, programLabel, contractorName, effectiveDate)
+  const doc = await buildOnboardingPDF(data, programLabel, contractorName, effectiveDate, exhibits)
   doc.save(`Stance-Onboarding-${contractorName.replace(/\s+/g, "-")}.pdf`)
 }
 
@@ -2036,8 +2091,9 @@ async function uploadOnboardingPDF(
   programLabel: string,
   contractorName: string,
   effectiveDate: string,
+  exhibits?: CompensationExhibit[],
 ): Promise<string> {
-  const doc = await buildOnboardingPDF(data, programLabel, contractorName, effectiveDate)
+  const doc = await buildOnboardingPDF(data, programLabel, contractorName, effectiveDate, exhibits)
   const pdfBlob = doc.output("blob")
   const file = new File(
     [pdfBlob],

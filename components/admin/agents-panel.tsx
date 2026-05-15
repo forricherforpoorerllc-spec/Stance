@@ -1,0 +1,458 @@
+"use client"
+
+import React, { useState, useCallback, useEffect } from "react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import {
+  Check,
+  ChevronDown,
+  Copy,
+  ExternalLink,
+  History,
+  Loader2,
+  Pencil,
+  Plus,
+  RefreshCw,
+  Trash2,
+  UserCircle,
+  X,
+} from "lucide-react"
+import type { AgentProfile } from "@/lib/order-types"
+
+const PARTNER_OPTIONS = [
+  { value: "referral",         label: "Referral Partner" },
+  { value: "sales-agent",      label: "Sales Agent" },
+  { value: "business",         label: "Business Partnership" },
+  { value: "spectrum-event",   label: "Spectrum Event Team" },
+  { value: "tmobile-d2d",      label: "T-Mobile D2D" },
+  { value: "verizon-d2d",      label: "Verizon D2D" },
+]
+
+function partnerLabel(value: string): string {
+  return PARTNER_OPTIONS.find((o) => o.value === value)?.label ?? value
+}
+
+function sourceTag(source: string) {
+  return source === "onboarding"
+    ? <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-violet-400 border border-violet-500/30 bg-violet-500/10 rounded-full px-2 py-0.5">Onboarding</span>
+    : <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400 border border-white/10 bg-white/5 rounded-full px-2 py-0.5">Manual</span>
+}
+
+// ── Select ────────────────────────────────────────────────────────────────────
+function Select({
+  value,
+  onChange,
+  options,
+}: {
+  value: string
+  onChange: (v: string) => void
+  options: { value: string; label: string }[]
+}) {
+  return (
+    <div className="relative">
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full h-11 rounded-xl border border-white/[0.1] bg-white/[0.04] text-white text-sm px-4 pr-8 appearance-none focus:outline-none focus:border-blue-500/50 focus:ring-0"
+      >
+        {options.map((o) => (
+          <option key={o.value} value={o.value} className="bg-[#111827]">
+            {o.label}
+          </option>
+        ))}
+      </select>
+      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-500 pointer-events-none" />
+    </div>
+  )
+}
+
+// ── Component ─────────────────────────────────────────────────────────────────
+
+export function AgentsPanel() {
+  const [agents, setAgents]         = useState<AgentProfile[]>([])
+  const [loading, setLoading]       = useState(true)
+  const [showForm, setShowForm]     = useState(false)
+  const [saving, setSaving]         = useState(false)
+  const [copiedId, setCopiedId]     = useState<string | null>(null)
+  const [errors, setErrors]         = useState<Record<string, string>>({})
+  const [editingId, setEditingId]   = useState<string | null>(null)
+  const [editSaving, setEditSaving] = useState(false)
+  const [editError, setEditError]   = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [edit, setEdit]             = useState<Partial<AgentProfile>>({})
+
+  // Form state
+  const [firstName, setFirstName]   = useState("")
+  const [lastName, setLastName]     = useState("")
+  const [email, setEmail]           = useState("")
+  const [phone, setPhone]           = useState("")
+  const [partnerType, setPartnerType] = useState("sales-agent")
+
+  const loadAgents = useCallback(async () => {
+    setLoading(true)
+    try {
+      const res = await fetch("/api/agents")
+      if (res.ok) setAgents(await res.json())
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => { loadAgents() }, [loadAgents])
+
+  const validate = (): boolean => {
+    const e: Record<string, string> = {}
+    if (!firstName.trim()) e.firstName = "Required"
+    if (!lastName.trim())  e.lastName  = "Required"
+    if (!email.trim())     e.email     = "Required"
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) e.email = "Invalid email"
+    setErrors(e)
+    return Object.keys(e).length === 0
+  }
+
+  const handleCreate = async () => {
+    if (!validate()) return
+    setSaving(true)
+    try {
+      const res = await fetch("/api/agents", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ firstName, lastName, email, phone, partnerType }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => null)
+        setErrors({ submit: data?.error || "Failed to create agent" })
+        return
+      }
+      const agent: AgentProfile = await res.json()
+      const isDupe = (agent as AgentProfile & { _duplicate?: boolean })._duplicate
+      setAgents((prev) => {
+        const filtered = prev.filter((a) => a.id !== agent.id)
+        return [agent, ...filtered].sort((a, b) =>
+          `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`)
+        )
+      })
+      if (isDupe) {
+        setErrors({ submit: "An agent with this email already exists — jumped to existing record." })
+      } else {
+        setShowForm(false)
+        setFirstName(""); setLastName(""); setEmail(""); setPhone("")
+        setPartnerType("sales-agent")
+      }
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const copyLink = async (agent: AgentProfile) => {
+    const url = `${window.location.origin}/orders?a=${agent.id}`
+    await navigator.clipboard.writeText(url)
+    setCopiedId(agent.id)
+    setTimeout(() => setCopiedId(null), 2000)
+  }
+
+  const startEdit = (agent: AgentProfile) => {
+    setEditingId(agent.id)
+    setEdit({
+      firstName: agent.firstName,
+      lastName:  agent.lastName,
+      email:     agent.email,
+      phone:     agent.phone,
+      partnerType: agent.partnerType,
+    })
+  }
+
+  const cancelEdit = () => {
+    setEditingId(null)
+    setEdit({})
+    setEditError(null)
+  }
+
+  const saveEdit = async () => {
+    if (!editingId) return
+    setEditError(null)
+    setEditSaving(true)
+    try {
+      const res = await fetch(`/api/agents/${editingId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(edit),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setEditError(data?.error || "Failed to save. Please try again.")
+        return
+      }
+      setAgents((prev) =>
+        prev.map((a) => (a.id === editingId ? data as AgentProfile : a)).sort((a, b) =>
+          `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`)
+        )
+      )
+      cancelEdit()
+    } catch {
+      setEditError("Network error. Please try again.")
+    } finally {
+      setEditSaving(false)
+    }
+  }
+
+  const handleDelete = async (agent: AgentProfile) => {
+    if (!confirm(`Delete agent "${agent.firstName} ${agent.lastName}"?\n\nTheir submitted orders will remain in the system, but they will lose access to their personal link.`)) return
+    setDeletingId(agent.id)
+    try {
+      const res = await fetch(`/api/agents/${agent.id}`, { method: "DELETE" })
+      if (res.ok) {
+        setAgents((prev) => prev.filter((a) => a.id !== agent.id))
+      }
+    } finally {
+      setDeletingId(null)
+    }
+  }
+
+  const inputCls = (err?: string) =>
+    `bg-white/[0.04] border text-white placeholder:text-slate-600 h-11 rounded-xl focus:ring-0 ${
+      err ? "border-red-500/50 focus:border-red-500" : "border-white/[0.1] focus:border-blue-500/50"
+    }`
+
+  return (
+    <div className="space-y-6">
+
+      {/* Header */}
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div>
+          <h2 className="text-lg font-bold text-white">Agent Roster</h2>
+          <p className="text-slate-500 text-sm mt-0.5">
+            Manage agents and generate personal order submission links.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={loadAgents}
+            disabled={loading}
+            className="border-white/[0.1] bg-white/[0.03] text-slate-400 hover:text-white hover:bg-white/[0.06] rounded-xl h-9 px-3"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
+          </Button>
+          <Button
+            onClick={() => setShowForm((v) => !v)}
+            className="bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl h-9 px-4 text-sm shadow-lg shadow-blue-500/25"
+          >
+            <Plus className="h-3.5 w-3.5 mr-1.5" />
+            Add Agent
+          </Button>
+        </div>
+      </div>
+
+      {/* Create form */}
+      {showForm && (
+        <div className="rounded-2xl border border-blue-500/20 bg-blue-500/[0.04] p-6">
+          <h3 className="text-sm font-bold text-blue-300 uppercase tracking-[0.18em] mb-4">New Agent</h3>
+          <div className="grid sm:grid-cols-2 gap-4 mb-4">
+            <div>
+              <Label className="text-slate-400 text-sm mb-1.5 block">First name <span className="text-red-500">*</span></Label>
+              <Input value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Jane" className={inputCls(errors.firstName)} />
+              {errors.firstName && <p className="text-red-500 text-xs mt-1">{errors.firstName}</p>}
+            </div>
+            <div>
+              <Label className="text-slate-400 text-sm mb-1.5 block">Last name <span className="text-red-500">*</span></Label>
+              <Input value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Smith" className={inputCls(errors.lastName)} />
+              {errors.lastName && <p className="text-red-500 text-xs mt-1">{errors.lastName}</p>}
+            </div>
+            <div>
+              <Label className="text-slate-400 text-sm mb-1.5 block">Email <span className="text-red-500">*</span></Label>
+              <Input value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="jane@example.com" className={inputCls(errors.email)} />
+              {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
+            </div>
+            <div>
+              <Label className="text-slate-400 text-sm mb-1.5 block">Phone</Label>
+              <Input value={phone} onChange={(e) => setPhone(e.target.value)} type="tel" placeholder="(555) 555-5555" className={inputCls()} />
+            </div>
+            <div className="sm:col-span-2">
+              <Label className="text-slate-400 text-sm mb-1.5 block">Program / Role</Label>
+              <Select value={partnerType} onChange={setPartnerType} options={PARTNER_OPTIONS} />
+            </div>
+          </div>
+          {errors.submit && <p className="text-red-400 text-sm mb-3">{errors.submit}</p>}
+          <div className="flex gap-3">
+            <Button
+              onClick={handleCreate}
+              disabled={saving}
+              className="bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl h-10 px-5 text-sm"
+            >
+              {saving ? <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />Creating…</> : "Create Agent"}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => { setShowForm(false); setErrors({}) }}
+              className="border-white/[0.1] bg-transparent text-slate-400 hover:text-white rounded-xl h-10 px-5 text-sm"
+            >
+              Cancel
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Agent list */}
+      {loading ? (
+        <div className="flex items-center justify-center py-16">
+          <Loader2 className="h-6 w-6 animate-spin text-slate-500" />
+        </div>
+      ) : agents.length === 0 ? (
+        <div className="text-center py-16 border border-dashed border-white/10 rounded-2xl">
+          <UserCircle className="h-10 w-10 text-slate-700 mx-auto mb-3" />
+          <p className="text-slate-500 text-sm">No agents yet. Add one above or wait for onboarding completions.</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {agents.map((agent) => {
+            const orderUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/orders?a=${agent.id}`
+            const copied = copiedId === agent.id
+            const isEditing = editingId === agent.id
+            const isDeleting = deletingId === agent.id
+
+            if (isEditing) {
+              return (
+                <div key={agent.id} className="rounded-xl border border-blue-500/30 bg-blue-500/[0.05] p-4 space-y-3">
+                  <div className="grid sm:grid-cols-2 gap-3">
+                    <Input
+                      value={edit.firstName ?? ""}
+                      onChange={(e) => setEdit((p) => ({ ...p, firstName: e.target.value }))}
+                      placeholder="First name"
+                      className={inputCls()}
+                    />
+                    <Input
+                      value={edit.lastName ?? ""}
+                      onChange={(e) => setEdit((p) => ({ ...p, lastName: e.target.value }))}
+                      placeholder="Last name"
+                      className={inputCls()}
+                    />
+                    <Input
+                      value={edit.email ?? ""}
+                      onChange={(e) => setEdit((p) => ({ ...p, email: e.target.value }))}
+                      type="email"
+                      placeholder="Email"
+                      className={inputCls()}
+                    />
+                    <Input
+                      value={edit.phone ?? ""}
+                      onChange={(e) => setEdit((p) => ({ ...p, phone: e.target.value }))}
+                      type="tel"
+                      placeholder="Phone"
+                      className={inputCls()}
+                    />
+                    <div className="sm:col-span-2">
+                      <Select
+                        value={edit.partnerType ?? "sales-agent"}
+                        onChange={(v) => setEdit((p) => ({ ...p, partnerType: v }))}
+                        options={PARTNER_OPTIONS}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={saveEdit}
+                      disabled={editSaving}
+                      className="bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl h-9 px-4 text-sm"
+                    >
+                      {editSaving ? <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />Saving…</> : "Save"}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={cancelEdit}
+                      className="border-white/[0.1] bg-transparent text-slate-400 hover:text-white rounded-xl h-9 px-4 text-sm"
+                    >
+                      <X className="h-3.5 w-3.5 mr-1.5" />
+                      Cancel
+                    </Button>
+                  </div>
+                  {editError && (
+                    <p className="text-red-400 text-xs mt-1">{editError}</p>
+                  )}
+                </div>
+              )
+            }
+
+            return (
+              <div
+                key={agent.id}
+                className="rounded-xl border border-white/[0.07] bg-white/[0.02] hover:bg-white/[0.04] transition-colors p-4 flex items-center gap-4 flex-wrap sm:flex-nowrap"
+              >
+                {/* Avatar */}
+                <div className="h-10 w-10 rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center flex-shrink-0 text-blue-300 text-sm font-bold">
+                  {agent.firstName[0]}{agent.lastName[0]}
+                </div>
+
+                {/* Info */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-sm font-semibold text-white">{agent.firstName} {agent.lastName}</p>
+                    {sourceTag(agent.source)}
+                  </div>
+                  <p className="text-xs text-slate-500 mt-0.5 truncate">
+                    {partnerLabel(agent.partnerType)} &middot; {agent.email}
+                    {agent.phone && ` · ${agent.phone}`}
+                  </p>
+                </div>
+
+                {/* Actions */}
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <Button
+                    variant="outline"
+                    onClick={() => copyLink(agent)}
+                    className="border-white/[0.1] bg-transparent text-slate-400 hover:text-white hover:bg-white/[0.06] rounded-xl h-8 px-3 text-xs"
+                    title={orderUrl}
+                  >
+                    {copied
+                      ? <><Check className="h-3 w-3 mr-1 text-emerald-400" />Copied</>
+                      : <><Copy className="h-3 w-3 mr-1" />Link</>
+                    }
+                  </Button>
+                  <a href={`/orders/history?a=${agent.id}`} target="_blank" rel="noopener noreferrer">
+                    <Button
+                      variant="outline"
+                      className="border-white/[0.1] bg-transparent text-slate-400 hover:text-white hover:bg-white/[0.06] rounded-xl h-8 w-8 px-0"
+                      title="View order history"
+                    >
+                      <History className="h-3.5 w-3.5" />
+                    </Button>
+                  </a>
+                  <a href={orderUrl} target="_blank" rel="noopener noreferrer">
+                    <Button
+                      variant="outline"
+                      className="border-white/[0.1] bg-transparent text-slate-400 hover:text-white hover:bg-white/[0.06] rounded-xl h-8 w-8 px-0"
+                      title="Open agent order link"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" />
+                    </Button>
+                  </a>
+                  <Button
+                    variant="outline"
+                    onClick={() => startEdit(agent)}
+                    className="border-white/[0.1] bg-transparent text-slate-400 hover:text-white hover:bg-white/[0.06] rounded-xl h-8 w-8 px-0"
+                    title="Edit agent"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => handleDelete(agent)}
+                    disabled={isDeleting}
+                    className="border-red-500/20 bg-transparent text-slate-500 hover:text-red-400 hover:border-red-500/40 hover:bg-red-500/[0.06] rounded-xl h-8 w-8 px-0"
+                    title="Delete agent"
+                  >
+                    {isDeleting
+                      ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      : <Trash2 className="h-3.5 w-3.5" />
+                    }
+                  </Button>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}

@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server"
+import { put, list } from "@vercel/blob"
+import type { AgentProfile } from "@/lib/order-types"
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY || ""
 const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxrE78Z0cd_qGq1KxcVyvOqxOk5LN2i87sX-HJ-dMFpd-EggkIu4ar2UtucCRtLiRU/exec"
@@ -229,7 +231,53 @@ export async function POST(req: Request) {
       }
     }
 
-    return NextResponse.json({ success: true })
+    // ── Auto-create (or reuse) agent profile for order system ─────────────
+    let agentId: string | null = null
+    if (process.env.BLOB_READ_WRITE_TOKEN && email?.trim()) {
+      try {
+        const normalizedEmail = email.trim().toLowerCase()
+
+        // Dedupe: find an existing agent with this email
+        const { blobs } = await list({ prefix: "agent-profiles/" })
+        let existing: AgentProfile | null = null
+        for (const b of blobs) {
+          const r = await fetch(b.url)
+          if (!r.ok) continue
+          const a = await r.json() as AgentProfile
+          if (a.email === normalizedEmail) { existing = a; break }
+        }
+
+        if (existing) {
+          agentId = existing.id
+        } else {
+          const nameParts = (legalName || "").trim().split(/\s+/)
+          const firstName = nameParts[0] || legalName || ""
+          const lastName  = nameParts.slice(1).join(" ") || ""
+          agentId = crypto.randomUUID().replace(/-/g, "").slice(0, 12)
+          const agent: AgentProfile = {
+            id: agentId,
+            firstName,
+            lastName,
+            email: normalizedEmail,
+            phone: phone?.trim() || "",
+            partnerType: partnerType || "sales-agent",
+            createdAt: new Date().toISOString(),
+            source: "onboarding",
+          }
+          await put(`agent-profiles/${agentId}.json`, JSON.stringify(agent), {
+            access: "public",
+            contentType: "application/json",
+            addRandomSuffix: false,
+            allowOverwrite: true,
+          })
+        }
+      } catch (agentErr) {
+        console.error("Agent profile creation error:", agentErr)
+        // Non-fatal
+      }
+    }
+
+    return NextResponse.json({ success: true, agentId })
   } catch (err) {
     console.error("Onboarding API error:", err)
     return NextResponse.json({ error: "Server error" }, { status: 500 })

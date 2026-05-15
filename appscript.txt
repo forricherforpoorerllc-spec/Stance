@@ -13,6 +13,12 @@ function doPost(e) {
       appendPartnerApplication(ss, data, timestamp);
     } else if (formType === "contact") {
       appendContact(ss, data, timestamp);
+    } else if (formType === "order") {
+      appendOrder(ss, data, timestamp);
+    } else if (formType === "statusUpdate") {
+      sendStatusUpdateEmail(data);
+    } else if (formType === "sheetStatusUpdate") {
+      updateOrderStatus(ss, data);
     }
 
     return ContentService
@@ -29,7 +35,10 @@ function getOrCreateSheet(ss, name, headers) {
   var sheet = ss.getSheetByName(name);
   if (!sheet) {
     sheet = ss.insertSheet(name);
-    sheet.appendRow(headers);
+  }
+  // Write headers whenever row 1 col 1 is blank (new sheet or cleared sheet)
+  if (sheet.getRange(1, 1).getValue() === "") {
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
     var range = sheet.getRange(1, 1, 1, headers.length);
     range.setBackground("#1a1a2e");
     range.setFontColor("#ffffff");
@@ -43,6 +52,191 @@ function getOrCreateSheet(ss, name, headers) {
   return sheet;
 }
 
+function formatDateMDY(dateStr) {
+  if (!dateStr) return "—";
+  var parts = dateStr.split("-");
+  if (parts.length !== 3) return dateStr;
+  return parseInt(parts[1]) + "/" + parseInt(parts[2]) + "/" + parts[0];
+}
+
+// ── Shared HTML email wrapper ─────────────────────────────────────────────────
+
+function emailWrap(bodyHtml) {
+  return '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,sans-serif;">'
+    + '<table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:32px 16px;">'
+    + '<tr><td align="center">'
+    + '<table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">'
+    + '<tr><td style="background:#0f172a;border-radius:16px 16px 0 0;padding:28px 32px;">'
+    + '<p style="margin:0;font-size:22px;font-weight:800;color:#ffffff;letter-spacing:0.12em;text-transform:uppercase;">STANCE</p>'
+    + '<p style="margin:4px 0 0;font-size:12px;color:#64748b;letter-spacing:0.08em;text-transform:uppercase;">Independent Sales &amp; Marketing</p>'
+    + '</td></tr>'
+    + '<tr><td style="background:#ffffff;padding:32px;border-radius:0 0 16px 16px;border:1px solid #e2e8f0;border-top:none;">'
+    + bodyHtml
+    + '</td></tr>'
+    + '<tr><td style="padding:20px 0 0;text-align:center;">'
+    + '<p style="margin:0;font-size:11px;color:#94a3b8;">stance-marketing.com &nbsp;·&nbsp; Confidential</p>'
+    + '</td></tr>'
+    + '</table>'
+    + '</td></tr></table></body></html>';
+}
+
+function sectionHeader(label) {
+  return '<p style="margin:24px 0 10px;font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.15em;border-bottom:1px solid #f1f5f9;padding-bottom:6px;">' + label + '</p>';
+}
+
+function row(label, value) {
+  if (!value || value === "—") return '';
+  return '<tr>'
+    + '<td style="padding:5px 0;font-size:13px;color:#64748b;width:38%;vertical-align:top;">' + label + '</td>'
+    + '<td style="padding:5px 0;font-size:13px;color:#1e293b;font-weight:500;">' + value + '</td>'
+    + '</tr>';
+}
+
+// ── Sheet status update (called when admin changes order status) ──────────────
+
+function updateOrderStatus(ss, data) {
+  var sheet = ss.getSheetByName("Orders");
+  if (!sheet || sheet.getLastRow() < 2) return;
+
+  // Column positions (1-indexed, matching appendOrder headers)
+  var ORDER_ID_COL = 2;   // "Order ID"
+  var STATUS_COL   = 22;  // "Status" — last column
+
+  var numRows  = sheet.getLastRow() - 1; // exclude header
+  var orderIds = sheet.getRange(2, ORDER_ID_COL, numRows, 1).getValues();
+
+  for (var i = 0; i < orderIds.length; i++) {
+    if (String(orderIds[i][0]) === String(data.orderId)) {
+      var rowNum = i + 2; // +1 for 1-indexed, +1 for header
+      sheet.getRange(rowNum, STATUS_COL).setValue(data.statusLabel || data.status || "");
+      return;
+    }
+  }
+}
+
+// ── Orders ────────────────────────────────────────────────────────────────────
+
+function appendOrder(ss, data, timestamp) {
+  var headers = [
+    "Timestamp", "Order ID",
+    "Agent Name", "Agent Email", "Agent Phone", "Program",
+    "Customer Name", "Customer Phone", "Customer Email", "Customer Address",
+    "Date of Birth", "SSN", "Card #", "Card Expiry", "CVV",
+    "Carrier", "Service / Plan", "Sale Date", "Install Date", "Install Time", "Notes", "Status"
+  ];
+  var sheet = getOrCreateSheet(ss, "Orders", headers);
+  sheet.appendRow([
+    timestamp, data.orderId || "",
+    data.agentName || "", data.agentEmail || "", data.agentPhone || "", data.partnerType || "",
+    data.customerName || "", data.customerPhone || "", data.customerEmail || "", data.customerAddress || "",
+    data.customerDob || "—", data.customerSsn || "—",
+    data.customerCcNumber || "—", data.customerCcExpiry || "—", data.customerCcCvv || "—",
+    data.carrier || "", data.service || "—",
+    data.saleDate || "—", data.installDate || "—", data.installTime || "—",
+    data.notes || "", "Submitted"
+  ]);
+  sendOrderEmail(data);
+}
+
+function sendOrderEmail(data) {
+  var isReferral = (data.partnerType || "").toLowerCase().indexOf("referral") !== -1;
+  var recipient = "gamblerspassion@gmail.com";
+  var serviceStr = data.service || "";
+  var subject = "Stance Agent Order – " + (data.agentName || "Unknown") + " – " + (data.carrier || "Unknown") + (serviceStr ? " – " + serviceStr : "");
+
+  var bodyHtml = '<h2 style="margin:0 0 4px;font-size:20px;font-weight:700;color:#0f172a;">' + (isReferral ? "Referral Submission" : "New Order") + '</h2>'
+    + '<p style="margin:0 0 8px;font-size:13px;color:#64748b;">Submitted ' + Utilities.formatDate(new Date(), "America/New_York", "M/d/yyyy 'at' h:mm a") + ' EST</p>'
+    + '<p style="margin:0 0 0;">Order ID: <code style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:4px;padding:2px 6px;font-size:12px;color:#334155;">' + (data.orderId || "—") + '</code></p>'
+
+    + sectionHeader("Agent")
+    + '<table cellpadding="0" cellspacing="0" width="100%">'
+    + row("Name", data.agentName)
+    + row("Email", data.agentEmail)
+    + row("Phone", data.agentPhone)
+    + row("Program", data.partnerType)
+    + '</table>'
+
+    + sectionHeader("Customer")
+    + '<table cellpadding="0" cellspacing="0" width="100%">'
+    + row("Name", data.customerName)
+    + row("Phone", data.customerPhone)
+    + row("Email", data.customerEmail)
+    + row("Address", data.customerAddress);
+
+  if (!isReferral) {
+    bodyHtml += row("Date of Birth", data.customerDob)
+      + row("SSN", data.customerSsn)
+      + row("Card #", data.customerCcNumber)
+      + row("Expiry / CVV", (data.customerCcExpiry && data.customerCcCvv) ? data.customerCcExpiry + " / " + data.customerCcCvv : (data.customerCcExpiry || data.customerCcCvv || ""));
+  }
+
+  bodyHtml += '</table>'
+    + sectionHeader("Order Details")
+    + '<table cellpadding="0" cellspacing="0" width="100%">'
+    + row("Carrier", data.carrier);
+
+  if (!isReferral && serviceStr) {
+    bodyHtml += row("Service / Plan", serviceStr);
+  }
+
+  bodyHtml += row("Sale Date", data.saleDate)
+    + row("Install Date", data.installDate)
+    + row("Install Time", data.installTime)
+    + row("Notes", data.notes)
+    + '</table>';
+
+  MailApp.sendEmail(recipient, subject, "", { htmlBody: emailWrap(bodyHtml) });
+}
+
+// ── Status update notification to agent ──────────────────────────────────────
+
+function sendStatusUpdateEmail(data) {
+  if (!data.agentEmail) return;
+  var firstName = (data.agentName || "").split(" ")[0] || "there";
+  var subject = "Stance Order Update – " + (data.statusLabel || "Status Changed");
+
+  var statusColors = {
+    "Submitted": { bg: "#dbeafe", color: "#1d4ed8" },
+    "Pending":   { bg: "#fef9c3", color: "#a16207" },
+    "Complete":  { bg: "#d1fae5", color: "#065f46" },
+    "Paid":      { bg: "#d1fae5", color: "#065f46" },
+    "Cancelled": { bg: "#fee2e2", color: "#991b1b" }
+  };
+  var sc = statusColors[data.statusLabel] || { bg: "#f1f5f9", color: "#334155" };
+
+  var bodyHtml = '<h2 style="margin:0 0 8px;font-size:20px;font-weight:700;color:#0f172a;">Hi ' + firstName + ',</h2>'
+    + '<p style="margin:0 0 20px;font-size:14px;color:#475569;">Your order status has been updated.</p>'
+    + '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:20px;margin-bottom:20px;">'
+    + '<table cellpadding="0" cellspacing="0" width="100%">'
+    + row("Customer", data.customer)
+    + row("Carrier", data.carrier + (data.service ? " – " + data.service : ""))
+    + row("Order ID", data.orderId)
+    + '</table>'
+    + '<div style="margin-top:14px;padding-top:14px;border-top:1px solid #e2e8f0;">'
+    + '<span style="font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.1em;">New Status &nbsp;</span>'
+    + '<span style="display:inline-block;background:' + sc.bg + ';color:' + sc.color + ';font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;padding:4px 12px;border-radius:99px;">' + (data.statusLabel || "") + '</span>'
+    + '</div>'
+    + '</div>';
+
+  if (data.adminNotes) {
+    bodyHtml += '<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:16px;">'
+      + '<p style="margin:0 0 6px;font-size:11px;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:0.1em;">Note from Admin</p>'
+      + '<p style="margin:0;font-size:14px;color:#78350f;">' + data.adminNotes + '</p>'
+      + '</div>';
+  }
+
+  if (data.notes) {
+    bodyHtml += '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:16px;margin-top:10px;">'
+      + '<p style="margin:0 0 6px;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.1em;">Order Notes</p>'
+      + '<p style="margin:0;font-size:14px;color:#334155;">' + data.notes + '</p>'
+      + '</div>';
+  }
+
+  MailApp.sendEmail(data.agentEmail, subject, "", { htmlBody: emailWrap(bodyHtml) });
+}
+
+// ── Other form types ──────────────────────────────────────────────────────────
+
 function appendOnboarding(ss, data, timestamp) {
   var headers = [
     "Timestamp", "Full Name", "DBA / Company", "Entity Type",
@@ -54,11 +248,11 @@ function appendOnboarding(ss, data, timestamp) {
   var address = [data.address, data.city, data.state && data.zipCode ? data.state + " " + data.zipCode : data.state || data.zipCode]
     .filter(Boolean).join(", ");
   sheet.appendRow([
-    timestamp, data.legalName||"" , data.dbaName||"", data.entityType||"",
-    data.email||"", data.phone||"", address,
-    data.program||"", data.tinType||"", data.tin||"",
-    data.idDocUrl||"", data.badgePhotoUrl||"", data.onboardingPdfUrl||"",
-    data.token||""
+    timestamp, data.legalName || "", data.dbaName || "", data.entityType || "",
+    data.email || "", data.phone || "", address,
+    data.program || "", data.tinType || "", data.tin || "",
+    data.idDocUrl || "", data.badgePhotoUrl || "", data.onboardingPdfUrl || "",
+    data.token || ""
   ]);
 }
 
@@ -66,8 +260,8 @@ function appendApplication(ss, data, timestamp) {
   var headers = ["Timestamp", "Name", "Email", "Phone", "State", "Company", "Program", "Details"];
   var sheet = getOrCreateSheet(ss, "Applications", headers);
   sheet.appendRow([
-    timestamp, data.name||"", data.email||"", data.phone||"",
-    data.state||"", data.company||"", data.program||"", data.details||""
+    timestamp, data.name || "", data.email || "", data.phone || "",
+    data.state || "", data.company || "", data.program || "", data.details || ""
   ]);
 }
 
@@ -75,9 +269,9 @@ function appendPartnerApplication(ss, data, timestamp) {
   var headers = ["Timestamp", "Name", "Email", "Phone", "Company", "Partnership Type", "State", "Experience", "Notes"];
   var sheet = getOrCreateSheet(ss, "Partner Applications", headers);
   sheet.appendRow([
-    timestamp, data.name||"", data.email||"", data.phone||"",
-    data.company||"", data.partnerType||"", data.state||"",
-    data.experience||"", data.notes||""
+    timestamp, data.name || "", data.email || "", data.phone || "",
+    data.company || "", data.partnerType || "", data.state || "",
+    data.experience || "", data.notes || ""
   ]);
 }
 
@@ -85,7 +279,7 @@ function appendContact(ss, data, timestamp) {
   var headers = ["Timestamp", "Name", "Email", "Phone", "Subject", "Message"];
   var sheet = getOrCreateSheet(ss, "Contact", headers);
   sheet.appendRow([
-    timestamp, data.name||"", data.email||"", data.phone||"",
-    data.subject||"", data.message||""
+    timestamp, data.name || "", data.email || "", data.phone || "",
+    data.subject || "", data.message || ""
   ]);
 }

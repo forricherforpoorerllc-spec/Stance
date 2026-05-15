@@ -15,8 +15,12 @@ import {
   ExternalLink,
   Loader2,
   LogOut,
+  Users,
+  ShoppingBag,
   Zap,
 } from "lucide-react"
+import { AgentsPanel } from "@/components/admin/agents-panel"
+import { OrdersPanel } from "@/components/admin/orders-panel"
 import {
   PROVIDERS,
   getDefaultAmountsForProvider,
@@ -52,6 +56,7 @@ const PARTNER_TYPE_OPTIONS = [
 
 export function AdminLinkGenerator() {
   const router = useRouter()
+  const [activeTab, setActiveTab] = useState<"link" | "agents" | "orders">("link")
   // ── Form state
   const [name, setName]               = useState("")
   const [email, setEmail]             = useState("")
@@ -214,7 +219,9 @@ export function AdminLinkGenerator() {
           <span className="rounded-full border border-red-500/40 bg-red-500/10 px-3 py-0.5 text-[11px] font-bold tracking-[0.2em] text-red-400 uppercase">
             Admin
           </span>
-          <span className="ml-auto text-xs text-slate-600 hidden sm:block">Generate Onboarding Link</span>
+          <span className="ml-auto text-xs text-slate-600 hidden sm:block">
+            {activeTab === "link" ? "Onboarding Links" : activeTab === "agents" ? "Agents" : "Orders"}
+          </span>
           <button
             onClick={async () => {
               await fetch("/api/admin-auth", { method: "DELETE" })
@@ -229,7 +236,40 @@ export function AdminLinkGenerator() {
         </div>
       </div>
 
+      {/* ── Tab bar ── */}
+      <div className="border-b border-white/[0.06] bg-[#0d1117]">
+        <div className="mx-auto max-w-5xl px-5 flex items-center gap-1">
+          {([
+            { key: "link",   label: "Onboarding Links", icon: Zap },
+            { key: "agents", label: "Agents",           icon: Users },
+            { key: "orders", label: "Orders",           icon: ShoppingBag },
+          ] as const).map(({ key, label, icon: Icon }) => (
+            <button
+              key={key}
+              onClick={() => setActiveTab(key)}
+              className={`flex items-center gap-2 px-4 py-3.5 text-sm font-semibold border-b-2 transition-colors ${
+                activeTab === key
+                  ? "border-red-500 text-white"
+                  : "border-transparent text-slate-500 hover:text-slate-300"
+              }`}
+            >
+              <Icon className="h-3.5 w-3.5" />
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div className="mx-auto max-w-5xl px-5 py-10 space-y-8">
+
+        {/* ── Agents tab ── */}
+        {activeTab === "agents" && <AgentsPanel />}
+
+        {/* ── Orders tab ── */}
+        {activeTab === "orders" && <OrdersPanel />}
+
+        {/* ── Link generator tab ── */}
+        {activeTab === "link" && (<>
 
         {/* ── Section: Contractor Info ── */}
         <div className="rounded-2xl border border-white/[0.08] bg-[#0d1117] overflow-hidden">
@@ -644,6 +684,8 @@ export function AdminLinkGenerator() {
             </table>
           </div>
         </div>
+
+        </>)}
 
       </div>
     </div>

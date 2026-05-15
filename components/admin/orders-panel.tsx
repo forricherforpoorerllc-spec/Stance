@@ -111,7 +111,7 @@ export function OrdersPanel() {
   }, [])
 
   const openUpdateModal = useCallback((order: Order) => {
-    setUpdateModal({ order, status: order.status, note: order.adminNotes ?? "", notifyAgent: false })
+    setUpdateModal({ order, status: order.status, note: order.adminNotes ?? "", notifyAgent: true })
   }, [])
 
   const saveModalUpdate = useCallback(async () => {

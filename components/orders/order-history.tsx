@@ -73,6 +73,14 @@ export function OrderHistory({ agentId }: { agentId: string | null }) {
     }
 
     let cancelled = false
+
+    const fetchOrders = () => {
+      fetch(`/api/orders/agent/${agentId}`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((o) => { if (!cancelled && o) setOrders(o) })
+        .catch(() => {})
+    }
+
     Promise.all([
       fetch(`/api/agents/${agentId}`).then((r) => (r.ok ? r.json() : null)),
       fetch(`/api/orders/agent/${agentId}`).then((r) => (r.ok ? r.json() : [])),
@@ -91,7 +99,13 @@ export function OrderHistory({ agentId }: { agentId: string | null }) {
       })
       .finally(() => { if (!cancelled) setLoading(false) })
 
-    return () => { cancelled = true }
+    // Silently re-fetch orders every 30 seconds so status changes from admin are reflected
+    const interval = setInterval(fetchOrders, 30_000)
+
+    return () => {
+      cancelled = true
+      clearInterval(interval)
+    }
   }, [agentId])
 
   // Build stats with commission lookup

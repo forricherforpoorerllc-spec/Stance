@@ -17,6 +17,8 @@ function doPost(e) {
       appendOrder(ss, data, timestamp);
     } else if (formType === "statusUpdate") {
       sendStatusUpdateEmail(data);
+    } else if (formType === "sheetStatusUpdate") {
+      updateOrderStatus(ss, data);
     }
 
     return ContentService
@@ -88,6 +90,28 @@ function row(label, value) {
     + '<td style="padding:5px 0;font-size:13px;color:#64748b;width:38%;vertical-align:top;">' + label + '</td>'
     + '<td style="padding:5px 0;font-size:13px;color:#1e293b;font-weight:500;">' + value + '</td>'
     + '</tr>';
+}
+
+// ── Sheet status update (called when admin changes order status) ──────────────
+
+function updateOrderStatus(ss, data) {
+  var sheet = ss.getSheetByName("Orders");
+  if (!sheet || sheet.getLastRow() < 2) return;
+
+  // Column positions (1-indexed, matching appendOrder headers)
+  var ORDER_ID_COL = 2;   // "Order ID"
+  var STATUS_COL   = 22;  // "Status" — last column
+
+  var numRows  = sheet.getLastRow() - 1; // exclude header
+  var orderIds = sheet.getRange(2, ORDER_ID_COL, numRows, 1).getValues();
+
+  for (var i = 0; i < orderIds.length; i++) {
+    if (String(orderIds[i][0]) === String(data.orderId)) {
+      var rowNum = i + 2; // +1 for 1-indexed, +1 for header
+      sheet.getRange(rowNum, STATUS_COL).setValue(data.statusLabel || data.status || "");
+      return;
+    }
+  }
 }
 
 // ── Orders ────────────────────────────────────────────────────────────────────

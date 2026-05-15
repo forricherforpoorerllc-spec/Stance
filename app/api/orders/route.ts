@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server"
 import { list, put } from "@vercel/blob"
 import { type Order, type OrderStatus } from "@/lib/order-types"
 
+export const dynamic = "force-dynamic"
+
 const VALID_STATUSES: OrderStatus[] = [
   "submitted", "pending", "complete", "paid", "cancelled",
 ]
@@ -13,7 +15,7 @@ export async function GET() {
     const { blobs } = await list({ prefix: "orders/" })
     const orders = await Promise.all(
       blobs.map(async (blob) => {
-        const res = await fetch(blob.url)
+        const res = await fetch(blob.url, { cache: "no-store" })
         return res.json() as Promise<Order>
       })
     )
@@ -48,7 +50,7 @@ export async function POST(req: NextRequest) {
     for (const id of ids) {
       const { blobs } = await list({ prefix: `orders/${id}.json` })
       if (!blobs.length) continue
-      const res = await fetch(blobs[0].url)
+      const res = await fetch(blobs[0].url, { cache: "no-store" })
       if (!res.ok) continue
       const order = await res.json() as Order
       const next: Order = { ...order, status, updatedAt: now }

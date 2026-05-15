@@ -6,6 +6,8 @@ import {
   ORDER_STATUS_LABELS,
 } from "@/lib/order-types"
 
+export const dynamic = "force-dynamic"
+
 const VALID_STATUSES: OrderStatus[] = [
   "submitted",
   "pending",
@@ -63,6 +65,26 @@ async function notifyAgentStatusChange(order: Order) {
   }
 }
 
+async function updateSheetStatus(order: Order) {
+  const scriptUrl = process.env.GOOGLE_ORDERS_SCRIPT_URL
+  if (!scriptUrl) return
+  try {
+    await fetch(scriptUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        formType:    "sheetStatusUpdate",
+        orderId:     order.id,
+        status:      order.status,
+        statusLabel: ORDER_STATUS_LABELS[order.status],
+        adminNotes:  order.adminNotes || "",
+      }),
+    })
+  } catch (err) {
+    console.error("Sheet status update failed:", err)
+  }
+}
+
 // ── GET /api/orders/[id] — fetch single order ────────────────────────────────────
 export async function GET(
   _req: NextRequest,
@@ -76,7 +98,7 @@ export async function GET(
     if (!blobs.length) {
       return NextResponse.json({ error: "Order not found" }, { status: 404 })
     }
-    const res = await fetch(blobs[0].url)
+    const res = await fetch(blobs[0].url, { cache: "no-store" })
     return NextResponse.json(await res.json() as Order)
   } catch (err) {
     console.error("Order fetch error:", err)
@@ -107,7 +129,7 @@ export async function PATCH(
       return NextResponse.json({ error: "Order not found" }, { status: 404 })
     }
 
-    const res = await fetch(blobs[0].url)
+    const res = await fetch(blobs[0].url, { cache: "no-store" })
     if (!res.ok) {
       return NextResponse.json({ error: "Failed to load order" }, { status: 500 })
     }
@@ -134,6 +156,11 @@ export async function PATCH(
       addRandomSuffix: false,
       allowOverwrite: true,
     })
+
+    // Always update the Google Sheet status column when status changes
+    if (status !== undefined && status !== prevStatus) {
+      updateSheetStatus(updated)
+    }
 
     // Fire-and-forget email on status change (only if admin requested it)
     if (notifyAgent === true && status !== undefined && status !== prevStatus) {

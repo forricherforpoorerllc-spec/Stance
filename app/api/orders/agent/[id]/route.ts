@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server"
 import { list } from "@vercel/blob"
 import type { Order } from "@/lib/order-types"
 
+export const dynamic = "force-dynamic"
+
 // ── GET /api/orders/agent/[id] — agent's own order history ───────────────────
 // Authenticated by possession of the agent ID (same trust model as the order link).
 export async function GET(
@@ -17,7 +19,7 @@ export async function GET(
     const { blobs } = await list({ prefix: "orders/" })
     const all = await Promise.all(
       blobs.map(async (blob) => {
-        const res = await fetch(blob.url)
+        const res = await fetch(blob.url, { cache: "no-store" })
         return res.json() as Promise<Order>
       })
     )
